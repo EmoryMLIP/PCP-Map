@@ -6,7 +6,7 @@ from src.icnn import PICNN
 from src.triflow_picnn import TriFlowPICNN
 from src.mmd import mmd
 
-parser = argparse.ArgumentParser('TC-Flow')
+parser = argparse.ArgumentParser('PCPM')
 parser.add_argument('--resume',      type=str, default="experiments/condition/concrete_2023_03_05_11_50_28_checkpt.pth")
 
 args = parser.parse_args()

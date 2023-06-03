@@ -17,7 +17,7 @@ plt.rcParams['image.cmap'] = 'inferno'
 argument parser for hyper parameters and model handling
 """
 
-parser = argparse.ArgumentParser('TC-Flow')
+parser = argparse.ArgumentParser('PCPM')
 parser.add_argument(
     '--data', choices=['moon', 'spiral', 'circles', 'swiss', '2spirals',
                        'checkerboard', 'pinwheel', '8gauss'],

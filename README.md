@@ -1,5 +1,5 @@
 # Partially Convex Potential Maps (PCPM)
-Pytorch implementation of our triangular convex flows model. The model constructs monotone 
+Pytorch implementation of our Partially Convex Potential Maps. The model constructs monotone 
 block triangular transport maps between probability measures as gradients of ICNNs.
 
 ## Toy problems
@@ -16,17 +16,25 @@ python evaluate_toy.py
 
 ## Small tabular dataset experiment
 
-Train TC-Flow over joint distribution
+Perform pilot runs:
+
 ```
-python train_highd.py
+python pretrain_cond.py
+python pretrain_joint.py
 ```
 
-Evaluate the trained model
+Perform experiments with best models:
 ```
-python evaluate_tabular.py
+python experiment_tab_cond.py
+python experiment_tab_joint.py
 ```
 
-Train TC-Flow over conditional distribution
+Train a single PCPM model to learn the block triangular map:
+```
+python train_joint.py
+```
+
+Train a single PCPM model to learn the conditional map:
 ```
 python train_cond.py
 ```
@@ -34,26 +42,23 @@ python train_cond.py
 Evaluate the trained model
 ```
 python evaluate_cond.py
-```
-
-Run TC-Flow random hyperparameter experiment
-```
-python experiment_tab_joint.py
-python experiment_tab_cond.py
+python evaluate_joint.py
 ```
 
 ## Stochastic Lotka Volterra
-Train TC-Flow on StochLV
+
+Perform pilot run:
 ```
-python train_lv.py
+python pretrain_cond.py
+```
+with dataset as "lv".
+
+Perform training with the best model:
+```
+python experiment_lv.py
 ```
 
 Evaluate the trained model
 ```
 python evaluate_lv.py
-```
-
-Run TC-Flow random hyperparameter experiment
-```
-python experiment_lv.py
 ```

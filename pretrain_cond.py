@@ -17,7 +17,7 @@ from lib.utils import makedirs, get_logger, AverageMeter
 argument parser for hyper parameters and model handling
 """
 
-parser = argparse.ArgumentParser('TC-Flow')
+parser = argparse.ArgumentParser('PCPM')
 parser.add_argument(
     '--data', choices=['concrete', 'energy', 'yacht', 'lv'], type=str, default='concrete'
 )
@@ -53,7 +53,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 def load_data(data, test_ratio, valid_ratio, batch_size, random_state):
 
     if data == 'lv':
-        dataset_load = scipy.io.loadmat('/TC-Flow/datasets/training_data.mat')
+        dataset_load = scipy.io.loadmat('.../PCPM/datasets/training_data.mat')
         x_train = dataset_load['x_train']
         y_train = dataset_load['y_train']
         dataset = np.concatenate((x_train, y_train), axis=1)

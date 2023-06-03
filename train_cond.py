@@ -19,7 +19,7 @@ from lib.utils import count_parameters, makedirs, get_logger, AverageMeter
 argument parser for hyper parameters and model handling
 """
 
-parser = argparse.ArgumentParser('TC-Flow')
+parser = argparse.ArgumentParser('PCPM')
 parser.add_argument(
     '--data', choices=['concrete', 'energy', 'yacht', 'lv'], type=str, default='lv'
 )
@@ -82,7 +82,7 @@ def update_lr_picnn(optimizer, n_vals_without_improvement):
 def load_data(data, test_ratio, valid_ratio, batch_size, random_state):
 
     if data == 'lv':
-        dataset_load = scipy.io.loadmat('/TC-Flow/datasets/training_data.mat')
+        dataset_load = scipy.io.loadmat('.../PCPM/datasets/training_data.mat')
         x_train = dataset_load['x_train']
         y_train = dataset_load['y_train']
         dataset = np.concatenate((x_train, y_train), axis=1)
@@ -134,7 +134,8 @@ def evaluate_model(model, data, batch_size, test_ratio, valid_ratio, random_stat
     pb_mean_NLL = -log_prob_picnn.mean()
     # Calculate MMD
     zx = torch.randn(testData.shape[0], input_x_dim).to(device)
-    x_generated, _ = flow_picnn.g2(zx, testData[:, :input_y_dim].to(device), tol=tol).detach().to(device)
+    x_generated, _ = flow_picnn.g2(zx, testData[:, :input_y_dim].to(device), tol=tol)
+    x_generated = x_generated.detach().to(device)
     mean_max_dis = mmd(x_generated, testData[:, input_y_dim:])
 
     return pb_mean_NLL.item(), mean_max_dis
@@ -279,7 +280,7 @@ if __name__ == '__main__':
                     test_hist = pd.DataFrame(columns=columns_test)
                     test_hist.loc[len(test_hist.index)] = [args.batch_size, args.lr, args.feature_dim,
                                                            args.num_layers_pi, NLL, MMD, timeMeter.sum, itr]
-                    testfile_name = '/TC-Flow/experiments/tabcond/' + args.data + '_test_hist.csv'
+                    testfile_name = '.../PCPM/experiments/tabcond/' + args.data + '_test_hist.csv'
                     if os.path.isfile(testfile_name):
                         test_hist.to_csv(testfile_name, mode='a', index=False, header=False)
                     else:
@@ -304,7 +305,7 @@ if __name__ == '__main__':
     test_hist = pd.DataFrame(columns=columns_test)
     test_hist.loc[len(test_hist.index)] = [args.batch_size, args.lr, args.feature_dim, args.num_layers_pi, NLL, MMD,
                                            timeMeter.sum, itr]
-    testfile_name = '/TC-Flow/experiments/tabcond/' + args.data + '_test_hist.csv'
+    testfile_name = '.../PCPM/experiments/tabcond/' + args.data + '_test_hist.csv'
     if os.path.isfile(testfile_name):
         test_hist.to_csv(testfile_name, mode='a', index=False, header=False)
     else:

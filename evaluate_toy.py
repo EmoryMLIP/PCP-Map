@@ -8,7 +8,7 @@ from src.icnn import FICNN, PICNN
 from src.triflow_ficnn import TriFlowFICNN
 from src.triflow_picnn import TriFlowPICNN
 
-parser = argparse.ArgumentParser('TC-Flow')
+parser = argparse.ArgumentParser('PCPM')
 parser.add_argument('--resume',         type=str, default="experiments/toy/moon_2022_11_13_13_22_33_checkpt.pth")
 
 args = parser.parse_args()

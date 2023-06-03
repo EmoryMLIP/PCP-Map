@@ -18,7 +18,7 @@ from lib.utils import count_parameters, makedirs, get_logger, AverageMeter
 argument parser for hyper parameters and model handling
 """
 
-parser = argparse.ArgumentParser('TC-Flow')
+parser = argparse.ArgumentParser('PCPM')
 parser.add_argument(
     '--data', choices=['wt_wine', 'rd_wine', 'parkinson'], type=str, default='rd_wine'
 )
@@ -138,8 +138,10 @@ def evaluate_model(ficnn_model, picnn_model, data, batch_size, test_ratio, valid
     sample_size = dat.shape[0]
     zy = torch.randn(sample_size, input_y_dim).to(device)
     zx = torch.randn(sample_size, input_x_dim).to(device)
-    y_generated, _ = ficnn_model.g1(zy, tol=tol).detach().to(device)
-    x_generated, _ = picnn_model.g2(zx, y_generated, tol=tol).detach().to(device)
+    y_generated, _ = ficnn_model.g1(zy, tol=tol)
+    y_generated = y_generated.detach().to(device)
+    x_generated, _ = picnn_model.g2(zx, y_generated, tol=tol)
+    x_generated = x_generated.detach().to(device)
     sample = torch.cat((y_generated, x_generated), dim=1)
     # calculate MMD statistic
     mean_max_dis = mmd(sample, dat)
@@ -323,7 +325,7 @@ if __name__ == '__main__':
                     test_hist = pd.DataFrame(columns=columns_test)
                     test_hist.loc[len(test_hist.index)] = [args.batch_size, args.lr, args.feature_dim,
                                                            args.num_layers_pi, NLL, MMD, timeMeter.sum, itr]
-                    testfile_name = '/TC-Flow/experiments/tabjoint/' + args.data + '_test_hist.csv'
+                    testfile_name = '.../PCPM/experiments/tabjoint/' + args.data + '_test_hist.csv'
                     if os.path.isfile(testfile_name):
                         test_hist.to_csv(testfile_name, mode='a', index=False, header=False)
                     else:
@@ -348,7 +350,7 @@ if __name__ == '__main__':
                     test_hist = pd.DataFrame(columns=columns_test)
                     test_hist.loc[len(test_hist.index)] = [args.batch_size, args.lr, args.feature_dim,
                                                            args.num_layers_pi, NLL, MMD, timeMeter.sum, itr]
-                    testfile_name = '/TC-Flow/experiments/tabjoint/' + args.data + '_test_hist.csv'
+                    testfile_name = '.../PCPM/experiments/tabjoint/' + args.data + '_test_hist.csv'
                     if os.path.isfile(testfile_name):
                         test_hist.to_csv(testfile_name, mode='a', index=False, header=False)
                     else:
@@ -373,7 +375,7 @@ if __name__ == '__main__':
     test_hist = pd.DataFrame(columns=columns_test)
     test_hist.loc[len(test_hist.index)] = [args.batch_size, args.lr, args.feature_dim, args.num_layers_pi, NLL, MMD,
                                            timeMeter.sum, itr]
-    testfile_name = '/TC-Flow/experiments/tabjoint/' + args.data + '_test_hist.csv'
+    testfile_name = '.../PCPM/experiments/tabjoint/' + args.data + '_test_hist.csv'
     if os.path.isfile(testfile_name):
         test_hist.to_csv(testfile_name, mode='a', index=False, header=False)
     else:

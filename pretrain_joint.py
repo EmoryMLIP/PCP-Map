@@ -15,7 +15,7 @@ from lib.utils import makedirs, get_logger, AverageMeter
 argument parser for hyper parameters and model handling
 """
 
-parser = argparse.ArgumentParser('TC-Flow')
+parser = argparse.ArgumentParser('PCPM')
 parser.add_argument(
     '--data', choices=['wt_wine', 'rd_wine', 'parkinson'], type=str, default='rd_wine'
 )

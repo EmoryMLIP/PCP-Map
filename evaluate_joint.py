@@ -12,7 +12,7 @@ from src.triflow_picnn import TriFlowPICNN
 from src.mmd import mmd
 from lib.utils import AverageMeter
 
-parser = argparse.ArgumentParser('TC-Flow')
+parser = argparse.ArgumentParser('PCPM')
 parser.add_argument('--resume',         type=str, default="experiments/tabular/rd_wine_2022_11_09_20_17_42_checkpt.pth")
 
 args = parser.parse_args()
@@ -107,8 +107,10 @@ if __name__ == '__main__':
     sample_size = dat.shape[0]
     zy = torch.randn(sample_size, input_y_dim).to(device)
     zx = torch.randn(sample_size, input_x_dim).to(device)
-    y_generated, _ = flow_ficnn.g1(zy, tol=checkpt['args'].tol).detach().to(device)
-    x_generated, _ = flow_picnn.g2(zx, y_generated, tol=checkpt['args'].tol).detach().to(device)
+    y_generated, _ = flow_ficnn.g1(zy, tol=checkpt['args'].tol)
+    y_generated = y_generated.detach().to(device)
+    x_generated, _ = flow_picnn.g2(zx, y_generated, tol=checkpt['args'].tol)
+    x_generated = x_generated.detach().to(device)
     sample = torch.cat((y_generated, x_generated), dim=1)
 
     # calculate MMD statistic

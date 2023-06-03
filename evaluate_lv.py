@@ -12,7 +12,7 @@ from src.triflow_picnn import TriFlowPICNN
 from datasets.StochasticLotkaVolterra import StochasticLotkaVolterra
 import matplotlib.pyplot as plt
 
-parser = argparse.ArgumentParser('TC-Flow')
+parser = argparse.ArgumentParser('PCPM')
 parser.add_argument('--resume',    type=str, default="/experiments/tabcond/lv/lv_2023_04_12_14_52_05_64_0.005_5_512_checkpt.pth")
 
 args = parser.parse_args()
@@ -38,7 +38,7 @@ def experiment(LV, abc_dat_path, theta_star, flow):
     theta_star_log = np.log(theta_star)
     symbols = [r'$\theta_1$', r'$\theta_2$', r'$\theta_3$', r'$\theta_4$']
     log_limits = [[-5., 2.], [-5., 2.], [-5., 2.], [-5., 2.]]
-    plot_matrix(theta_gen, log_limits, keeplabel=False, xtrue=theta_star_log, symbols=symbols)
+    plot_matrix(theta_gen, log_limits, xtrue=theta_star_log, symbols=symbols)
     sPath = os.path.join(checkpt['args'].save, 'figs', checkpt['args'].data + '_' + str(theta_star[0].item()) + '.png')
     if not os.path.exists(os.path.dirname(sPath)):
         os.makedirs(os.path.dirname(sPath))
@@ -98,9 +98,9 @@ if __name__ == '__main__':
     Test Generated Sample
     """
 
-    # dataset_load = scipy.io.loadmat('/TC-Flow/datasets/training_data500k.mat')    # load 500k training samples
+    # dataset_load = scipy.io.loadmat('.../PCPM/datasets/training_data500k.mat')    # load 500k training samples
     # dat = dataset_load["train_data"]
-    dataset_load = scipy.io.loadmat('/TC-Flow/datasets/training_data.mat')
+    dataset_load = scipy.io.loadmat('.../PCPM/datasets/training_data.mat')
     x_train = dataset_load['x_train']
     y_train = dataset_load['y_train']
     dat = np.concatenate((x_train, y_train), axis=1)
@@ -115,10 +115,10 @@ if __name__ == '__main__':
     train_std = np.std(train, axis=0, keepdims=True)
 
     StochLV = StochasticLotkaVolterra()
-    path_theta1 = '/TC-Flow/experiments/tabcond/lv/StochasticLV_ABCsamples2k.pk'
+    path_theta1 = '.../PCPM/experiments/tabcond/lv/StochasticLV_ABCsamples2k.pk'
     theta1 = np.array([0.01, 0.5, 1, 0.01])
     experiment(StochLV, path_theta1, theta1, flow_picnn)
 
-    path_theta2 = '/TC-Flow/experiments/tabcond/lv/StochasticLV_ABCsamplesNewTheta.pk'
+    path_theta2 = '.../PCPM/experiments/tabcond/lv/StochasticLV_ABCsamplesNewTheta.pk'
     theta2 = np.array([0.02, 0.02, 0.02, 0.02])
     experiment(StochLV, path_theta2, theta2, flow_picnn)
