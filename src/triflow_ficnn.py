@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
+import torch.func as func
 from lib.utils import AverageMeter
 
 
@@ -34,8 +35,12 @@ class TriFlowFICNN(nn.Module):
         :return: output of the FICNN potential
         """
         # quadratic term for strong convexity
-        quad = torch.norm(y, dim=1, keepdim=True) ** 2 / 2
+        # quad = torch.norm(y, dim=1, keepdim=True) ** 2 / 2
+        quad = y*y/2
         return F.softplus(self.w1_ficnn) * F.softplus(self.ficnn(y)) + (F.relu(self.w2_ficnn)+F.softplus(self.w3_ficnn)) * quad
+
+    def compute_sum(self, y):
+        return self.get_ficnn(y).sum()
 
     def g1inv(self, y):
         """
@@ -51,15 +56,16 @@ class TriFlowFICNN(nn.Module):
         :param y: samples from the target marginal distribution
         :return: gradient of the inverse map
         """
-        if y.shape[1] > 1:
-            y_grad = self.g1inv(y)
-            hessian = []
-            for i in range(y_grad.shape[1]):
-                hessian.append(torch.autograd.grad(y_grad[:, i].sum(), y, create_graph=True)[0])
-            hessian = torch.stack(hessian, dim=1)
-        else:
-            g1inv = self.g1inv(y)
-            hessian = torch.autograd.grad(g1inv.sum(), y, create_graph=True)[0]
+        hessian = func.vmap(func.hessian(self.compute_sum, argnums=0), in_dims=0)(y)
+        # if y.shape[1] > 1:
+        #     y_grad = self.g1inv(y)
+        #     hessian = []
+        #     for i in range(y_grad.shape[1]):
+        #         hessian.append(torch.autograd.grad(y_grad[:, i].sum(), y, create_graph=True)[0])
+        #     hessian = torch.stack(hessian, dim=1)
+        # else:
+        #     g1inv = self.g1inv(y)
+        #     hessian = torch.autograd.grad(g1inv.sum(), y, create_graph=True)[0]
         return hessian
 
     def loglik_ficnn(self, y):
@@ -111,6 +117,7 @@ class TriFlowFICNN(nn.Module):
 if __name__ == "__main__":
 
     # checking the inverse
+
     from src.icnn import FICNN
     y1 = torch.randn(100, 1).view(-1, 1).requires_grad_(True)
     y2 = torch.randn(100, 3).requires_grad_(True)
@@ -128,3 +135,22 @@ if __name__ == "__main__":
     print("Number of closure evaluations for y2: " + str(num_evals2))
     print("Inversion Relative Error: " + str(err1.item()))
     print("Block Inversion Relative Error: " + str(err2.item()))
+
+    # grad check
+    fv = flow2.compute_sum(y2)
+    zyy_2 = flow2.g1inv_grad(y2)
+    dy2 = torch.rand_like(y2)
+    dzy2dy2 = torch.sum(zy_2 * dy2)
+    dzyy2dy2 = torch.matmul(torch.matmul(dy2.unsqueeze(-1).transpose(2, 1), zyy_2), dy2.unsqueeze(-1)).sum()
+    h, E0, E1, E2 = [1.0], [], [], []
+    print("h\t E0 \t E1 \t E2".expandtabs(20))
+    for i in range(11):
+        h.append(h[i] / 2)
+        fvt = flow2.compute_sum(y2 + h[i + 1] * dy2)
+        fdiff = fvt - fv
+        fdiff1 = fdiff - h[i + 1] * dzy2dy2
+        fdiff2 = fdiff1 - 0.5 * (h[i + 1] ** 2) * dzyy2dy2
+        E0.append(torch.abs(fdiff).item())
+        E1.append(torch.abs(fdiff1).item())
+        E2.append(torch.abs(fdiff2).item())
+        print(f"{h[i + 1]}\t {E0[i]}\t {E1[i]}\t {E2[i]}".expandtabs(20))

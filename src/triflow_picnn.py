@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
+import torch.func as func
 from lib.utils import AverageMeter
 
 
@@ -35,8 +36,12 @@ class TriFlowPICNN(nn.Module):
         :return: output of the PICNN potential
         """
         # quadratic term for strong convexity
-        quad = torch.norm(x, dim=1, keepdim=True) ** 2 / 2
+        # quad = torch.norm(x, dim=1, keepdim=True) ** 2 / 2
+        quad = x*x/2
         return F.softplus(self.w1_picnn) * F.softplus(self.picnn(x, y)) + (F.relu(self.w2_picnn)+F.softplus(self.w3_picnn)) * quad
+
+    def compute_sum(self, x, y):
+        return self.get_picnn(x, y).sum()
 
     def g2inv(self, x, y):
         """
@@ -54,15 +59,16 @@ class TriFlowPICNN(nn.Module):
         :param y: observation/data component of the samples from the target joint distribution
         :return: gradient of the inverse map w.r.t. x
         """
-        if x.shape[1] > 1:
-            x_grad = self.g2inv(x, y)
-            hessian = []
-            for i in range(x_grad.shape[1]):
-                hessian.append(torch.autograd.grad(x_grad[:, i].sum(), x, create_graph=True)[0])
-            hessian = torch.stack(hessian, dim=1)
-        else:
-            g2inv = self.g2inv(x, y)
-            hessian = torch.autograd.grad(g2inv.sum(), x, create_graph=True)[0]
+        hessian = func.vmap(func.hessian(self.compute_sum, argnums=0), in_dims=(0, 0))(x, y)
+        # if x.shape[1] > 1:
+        #     x_grad = self.g2inv(x, y)
+        #     hessian = []
+        #     for i in range(x_grad.shape[1]):
+        #         hessian.append(torch.autograd.grad(x_grad[:, i].sum(), x, create_graph=True)[0])
+        #     hessian = torch.stack(hessian, dim=1)
+        # else:
+        #     g2inv = self.g2inv(x, y)
+        #     hessian = torch.autograd.grad(g2inv.sum(), x, create_graph=True)[0]
         return hessian
 
     def loglik_picnn(self, x, y):
@@ -115,7 +121,7 @@ class TriFlowPICNN(nn.Module):
 
 
 if __name__ == "__main__":
-
+    from functorch import vmap, grad
     # checking the inverse
     from src.icnn import PICNN
     picnn1 = PICNN(1, 1, 128, 1, 6)
@@ -136,3 +142,24 @@ if __name__ == "__main__":
     print("Number of closure evaluations for x2: " + str(num_evals2))
     print("Inversion Relative Error: " + str(err1.item()))
     print("Block Inversion Relative Error: " + str(err2.item()))
+
+    # grad check
+    fv = flow2.compute_sum(x2, y2)
+    zxx_2 = flow2.g2inv_grad(x2, y2)
+    dx2 = torch.rand_like(x2)
+    dzx2dx2 = torch.sum(zx_2*dx2)
+    dzxx2dx2 = torch.matmul(torch.matmul(dx2.unsqueeze(-1).transpose(2, 1), zxx_2), dx2.unsqueeze(-1)).sum()
+    h, E0, E1, E2 = [1.0], [], [], []
+    print("h\t E0 \t E1 \t E2".expandtabs(20))
+    for i in range(11):
+        h.append(h[i]/2)
+        fvt = flow2.compute_sum(x2+h[i+1]*dx2, y2)
+        fdiff = fvt-fv
+        fdiff1 = fdiff - h[i+1]*dzx2dx2
+        fdiff2 = fdiff1 - 0.5*(h[i+1]**2)*dzxx2dx2
+        E0.append(torch.abs(fdiff).item())
+        E1.append(torch.abs(fdiff1).item())
+        E2.append(torch.abs(fdiff2).item())
+        print(f"{h[i + 1]}\t {E0[i]}\t {E1[i]}\t {E2[i]}".expandtabs(20))
+
+
