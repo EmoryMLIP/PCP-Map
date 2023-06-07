@@ -75,8 +75,7 @@ class FICNN(nn.Module):
 
         z = self.act(self.Lz[0](x))
         for lz, ly, ly2 in zip(self.Lz[1:-1], self.Ly[:-1], self.Ly2[:]):
-            # down = 1 / z.shape[1]
-            down = len(z.t())
+            down = 1 / len(z.t())
             if self.reparam is True:
                 # reparameterization
                 Lzi_pos = self.nonneg(lz.weight)
@@ -86,8 +85,7 @@ class FICNN(nn.Module):
             aug = ly2(x)
             aug = self.act(aug)
             z = torch.cat([z, aug], -1)
-        # down = 1 / z.shape[1]
-        down = len(z.t())
+        down = 1 / len(z.t())
         if self.reparam is True:
             Lzk_pos = self.nonneg(self.Lz[-1].weight)
             z = F.linear(z, Lzk_pos, self.Lz[-1].bias) * down + self.Ly[-1](x)
@@ -203,8 +201,7 @@ class PICNN(nn.Module):
 
         # intermediate layers activations
         for lv, lvw, lw, lwv, lxv, lx in NN_zip:
-            # down = 1 / w.shape[1]
-            down = len(w.t())
+            down = 1 / len(w.t())
             v = self.act_v(lv(v))
             wk_prod = torch.mul(w, F.relu(lwv(v)))
             xk_prod = torch.mul(in_x, lxv(v))
@@ -215,8 +212,7 @@ class PICNN(nn.Module):
                 w = self.act(lw(wk_prod) * down + lx(xk_prod) + lvw(v))
 
         # last layer activation
-        # down = 1 / w.shape[1]
-        down = len(w.t())
+        down = 1 / len(w.t())
         vK = torch.tanh(self.Lv[-1](v))
         wK_prod = torch.mul(w, F.relu(self.Lwv[-1](vK)))
         xK_prod = torch.mul(in_x, self.Lxv[-1](vK))

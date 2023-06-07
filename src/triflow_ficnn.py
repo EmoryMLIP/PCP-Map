@@ -35,8 +35,7 @@ class TriFlowFICNN(nn.Module):
         :return: output of the FICNN potential
         """
         # quadratic term for strong convexity
-        # quad = torch.norm(y, dim=1, keepdim=True) ** 2 / 2
-        quad = y*y/2
+        quad = y*y / 2
         return F.softplus(self.w1_ficnn) * F.softplus(self.ficnn(y)) + (F.relu(self.w2_ficnn)+F.softplus(self.w3_ficnn)) * quad
 
     def compute_sum(self, y):
@@ -57,15 +56,6 @@ class TriFlowFICNN(nn.Module):
         :return: gradient of the inverse map
         """
         hessian = func.vmap(func.hessian(self.compute_sum, argnums=0), in_dims=0)(y)
-        # if y.shape[1] > 1:
-        #     y_grad = self.g1inv(y)
-        #     hessian = []
-        #     for i in range(y_grad.shape[1]):
-        #         hessian.append(torch.autograd.grad(y_grad[:, i].sum(), y, create_graph=True)[0])
-        #     hessian = torch.stack(hessian, dim=1)
-        # else:
-        #     g1inv = self.g1inv(y)
-        #     hessian = torch.autograd.grad(g1inv.sum(), y, create_graph=True)[0]
         return hessian
 
     def loglik_ficnn(self, y):

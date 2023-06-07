@@ -36,8 +36,7 @@ class TriFlowPICNN(nn.Module):
         :return: output of the PICNN potential
         """
         # quadratic term for strong convexity
-        # quad = torch.norm(x, dim=1, keepdim=True) ** 2 / 2
-        quad = x*x/2
+        quad = x*x / 2
         return F.softplus(self.w1_picnn) * F.softplus(self.picnn(x, y)) + (F.relu(self.w2_picnn)+F.softplus(self.w3_picnn)) * quad
 
     def compute_sum(self, x, y):
@@ -60,15 +59,6 @@ class TriFlowPICNN(nn.Module):
         :return: gradient of the inverse map w.r.t. x
         """
         hessian = func.vmap(func.hessian(self.compute_sum, argnums=0), in_dims=(0, 0))(x, y)
-        # if x.shape[1] > 1:
-        #     x_grad = self.g2inv(x, y)
-        #     hessian = []
-        #     for i in range(x_grad.shape[1]):
-        #         hessian.append(torch.autograd.grad(x_grad[:, i].sum(), x, create_graph=True)[0])
-        #     hessian = torch.stack(hessian, dim=1)
-        # else:
-        #     g2inv = self.g2inv(x, y)
-        #     hessian = torch.autograd.grad(g2inv.sum(), x, create_graph=True)[0]
         return hessian
 
     def loglik_picnn(self, x, y):
@@ -161,5 +151,3 @@ if __name__ == "__main__":
         E1.append(torch.abs(fdiff1).item())
         E2.append(torch.abs(fdiff2).item())
         print(f"{h[i + 1]}\t {E0[i]}\t {E1[i]}\t {E2[i]}".expandtabs(20))
-
-
