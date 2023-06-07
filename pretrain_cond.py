@@ -28,7 +28,6 @@ parser.add_argument('--out_dim',        type=int, default=1, help="output dimens
 parser.add_argument('--clip',           type=bool, default=True, help="whether clipping the weights or not")
 parser.add_argument('--tol',            type=float, default=1e-12, help="LBFGS tolerance")
 
-parser.add_argument('--print_freq',     type=int, default=1, help="how often to print results to log")
 parser.add_argument('--test_ratio',     type=float, default=0.10, help="test set ratio")
 parser.add_argument('--valid_ratio',    type=float, default=0.10, help="validation set ratio")
 parser.add_argument('--random_state',   type=int, default=42, help="random state for splitting dataset")
@@ -144,7 +143,7 @@ if __name__ == '__main__':
             num_epochs = 25
 
         for epoch in range(num_epochs):
-            for i, sample in enumerate(train_loader):
+            for sample in train_loader:
                 if args.data == 'lv':
                     x = sample[:, :args.input_x_dim].requires_grad_(True).to(device)
                     y = sample[:, args.input_x_dim:].requires_grad_(True).to(device)
@@ -166,7 +165,7 @@ if __name__ == '__main__':
 
         valLossMeterPICNN = AverageMeter()
 
-        for k, valid_sample in enumerate(valid_loader):
+        for valid_sample in valid_loader:
             if args.data == 'lv':
                 x_valid = valid_sample[:, :args.input_x_dim].requires_grad_(True).to(device)
                 y_valid = valid_sample[:, args.input_x_dim:].requires_grad_(True).to(device)
