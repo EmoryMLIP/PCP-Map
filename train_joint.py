@@ -127,7 +127,7 @@ def evaluate_model(ficnn_model, picnn_model, data, batch_size, test_ratio, valid
     )
     # Obtain Test Metrics Numbers
     testLossMeter = AverageMeter()
-    for _, test_sample in enumerate(test_loader):
+    for test_sample in test_loader:
         x_test = test_sample[:, input_y_dim:].requires_grad_(True).to(device)
         y_test = test_sample[:, :input_y_dim].requires_grad_(True).to(device)
         log_prob1 = ficnn_model.loglik_ficnn(y_test)
@@ -262,7 +262,7 @@ if __name__ == '__main__':
                 valLossMeterFICNN = AverageMeter()
                 valLossMeterPICNN = AverageMeter()
 
-                for k, valid_sample in enumerate(valid_loader):
+                for valid_sample in valid_loader:
                     x_valid = valid_sample[:, args.input_y_dim:].requires_grad_(True).to(device)
                     y_valid = valid_sample[:, :args.input_y_dim].requires_grad_(True).to(device)
                     mean_valid_loss_ficnn = -flow_ficnn.loglik_ficnn(y_valid).mean()

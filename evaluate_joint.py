@@ -87,7 +87,7 @@ if __name__ == '__main__':
     # Obtain Test Metrics Numbers
     testLossMeter = AverageMeter()
 
-    for i, test_sample in enumerate(test_loader):
+    for test_sample in test_loader:
         x_test = test_sample[:, input_y_dim:].requires_grad_(True).to(device)
         y_test = test_sample[:, :input_y_dim].requires_grad_(True).to(device)
         log_prob1 = flow_ficnn.loglik_ficnn(y_test)

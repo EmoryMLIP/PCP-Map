@@ -152,10 +152,10 @@ class PICNN(nn.Module):
                 Lwk.weight.data = nonneg(Lwk.weight)
             Lw.append(Lwk)
 
-        LzK = nn.Linear(feature_dim, out_dim, bias=True)
+        LwK = nn.Linear(feature_dim, out_dim, bias=True)
         with torch.no_grad():
-            LzK.weight.data = nonneg(LzK.weight)
-        Lw.append(LzK)
+            LwK.weight.data = nonneg(LwK.weight)
+        Lw.append(LwK)
         self.Lw = nn.ModuleList(Lw)
 
         # context path for v times w

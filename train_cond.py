@@ -235,7 +235,7 @@ if __name__ == '__main__':
 
                 valLossMeterPICNN = AverageMeter()
 
-                for k, valid_sample in enumerate(valid_loader):
+                for valid_sample in valid_loader:
                     if args.data == 'lv':
                         x_valid = valid_sample[:, :args.input_x_dim].requires_grad_(True).to(device)
                         y_valid = valid_sample[:, args.input_x_dim:].requires_grad_(True).to(device)
