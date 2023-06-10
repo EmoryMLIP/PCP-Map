@@ -124,18 +124,17 @@ class PICNN(nn.Module):
 
         # forward path for v(x)
         Lv = list()
-        for k in range(num_layers):
-            Lv.append(nn.Linear(input_y_dim, input_y_dim, bias=True))
+        Lv.append(nn.Linear(input_y_dim, feature_dim, bias=True))
+        for k in range(num_layers - 1):
+            Lv.append(nn.Linear(feature_dim, feature_dim, bias=True))
         self.Lv = nn.ModuleList(Lv)
 
         # forward path for v into w
         Lvw = list()
         Lvw.append(nn.Linear(input_y_dim, feature_dim, bias=False))
-
         for k in range(num_layers - 1):
-            Lvw.append(nn.Linear(input_y_dim, feature_dim, bias=False))
-
-        Lvw.append(nn.Linear(input_y_dim, out_dim, bias=False))
+            Lvw.append(nn.Linear(feature_dim, feature_dim, bias=False))
+        Lvw.append(nn.Linear(feature_dim, out_dim, bias=False))
         self.Lvw = nn.ModuleList(Lvw)
 
         # forward path for w product, positive weights
@@ -162,13 +161,13 @@ class PICNN(nn.Module):
         Lwv = list()
         Lwv.append(nn.Linear(input_y_dim, input_x_dim, bias=True))
         for k in range(num_layers):
-            Lwv.append(nn.Linear(input_y_dim, feature_dim, bias=True))
+            Lwv.append(nn.Linear(feature_dim, feature_dim, bias=True))
         self.Lwv = nn.ModuleList(Lwv)
 
         # context path for v times x
         Lxv = list()
         for k in range(num_layers):
-            Lxv.append(nn.Linear(input_y_dim, input_x_dim, bias=True))
+            Lxv.append(nn.Linear(feature_dim, input_x_dim, bias=True))
         self.Lxv = nn.ModuleList(Lxv)
 
         # forward path for x product
