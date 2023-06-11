@@ -28,6 +28,7 @@ parser.add_argument('--data_size',      type=int, default=30000, help="input dat
 parser.add_argument('--input_x_dim',    type=int, default=1, help="input data convex dimension")
 parser.add_argument('--input_y_dim',    type=int, default=1, help="input data non-convex dimension")
 parser.add_argument('--feature_dim',    type=int, default=256, help="intermediate layer feature dimension")
+parser.add_argument('--feature_y_dim',  type=int, default=1, help="intermediate layer feature dimension")
 parser.add_argument('--out_dim',        type=int, default=1, help="output dimension")
 parser.add_argument('--num_layers_fi',  type=int, default=3, help="depth of FICNN network")
 parser.add_argument('--num_layers_pi',  type=int, default=3, help="depth of PICNN network")
@@ -151,7 +152,8 @@ if __name__ == '__main__':
 
     prior = distributions.MultivariateNormal(torch.zeros(1).to(device), torch.eye(1).to(device))
     ficnn = FICNN(args.input_y_dim, args.feature_dim, args.out_dim, args.num_layers_fi, reparam=reparam).to(device)
-    picnn = PICNN(args.input_x_dim, args.input_y_dim, args.feature_dim, args.out_dim, args.num_layers_pi, reparam=reparam).to(device)
+    picnn = PICNN(args.input_x_dim, args.input_y_dim, args.feature_dim, args.feature_y_dim,
+                  args.out_dim, args.num_layers_pi, reparam=reparam).to(device)
 
     flow_ficnn = TriFlowFICNN(prior, ficnn).to(device)
     flow_picnn = TriFlowPICNN(prior, picnn).to(device)

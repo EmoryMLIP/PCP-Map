@@ -12,10 +12,11 @@ param_list = unique_param[0, :]
 batch_size = int(param_list[0])
 lr = param_list[1]
 width = int(param_list[2])
-num_layers = int(param_list[3])
+width_y = int(param_list[3])
+num_layers = int(param_list[4])
 
 os.system(
     "python train_cond.py --data 'lv' --valid_freq 50 --early_stopping 20  --input_x_dim 4 --input_y_dim 9\
-     --num_layers_pi " + str(num_layers) + " --feature_dim " + str(width) + " --batch_size " + str(
-     batch_size) + " --lr " + str(lr) + " --save_test False --save 'experiments/tabcond/lv'"
+     --num_layers_pi " + str(num_layers) + " --feature_dim " + str(width) + " --feature_y_dim " + str(width_y) +
+    " --batch_size " + str(batch_size) + " --lr " + str(lr) + " --save_test False --save 'experiments/tabcond/lv'"
 )

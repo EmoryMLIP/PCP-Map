@@ -91,7 +91,7 @@ def load_data(data, test_ratio, valid_ratio, batch_size, random_state):
 
 if __name__ == '__main__':
 
-    columns_params = ["batchsz", "lr", "width", "depth"]
+    columns_params = ["batchsz", "lr", "width", "width_y", "depth"]
     columns_valid = ["picnn_nll"]
     params_hist = pd.DataFrame(columns=columns_params)
     valid_hist = pd.DataFrame(columns=columns_valid)
@@ -108,7 +108,7 @@ if __name__ == '__main__':
         batch_size_list = np.array([32, 64])
     lr_list = np.array([0.01, 0.005, 0.001])
 
-    for trial in range(50):
+    for trial in range(80):
 
         batch_size = int(np.random.choice(batch_size_list))
         train_loader, valid_loader, _ = load_data(args.data, args.test_ratio, args.valid_ratio,
@@ -121,6 +121,15 @@ if __name__ == '__main__':
             reparam = True
 
         width = np.random.choice(width_list)
+        if args.data == "lv":
+            width_y = width
+        else:
+            width_y_list = [width]
+            feat_dim = width
+            while feat_dim >= args.input_y_dim:
+                feat_dim = feat_dim // 2
+                width_y_list.append(feat_dim)
+            width_y = np.random.choice(width_y_list)
         num_layers = np.random.choice(depth_list)
         lr = np.random.choice(lr_list)
 
@@ -129,16 +138,16 @@ if __name__ == '__main__':
                                                        torch.eye(args.input_x_dim).to(device))
 
         # establish TC-Flow
-        picnn = PICNN(args.input_x_dim, args.input_y_dim, width, args.out_dim, num_layers, reparam=reparam).to(device)
+        picnn = PICNN(args.input_x_dim, args.input_y_dim, width, width_y, args.out_dim, num_layers, reparam=reparam).to(device)
         flow_picnn = TriFlowPICNN(prior_picnn, picnn).to(device)
         optimizer = torch.optim.Adam(flow_picnn.parameters(), lr=lr)
 
-        params_hist.loc[len(params_hist.index)] = [batch_size, lr, width, num_layers]
+        params_hist.loc[len(params_hist.index)] = [batch_size, lr, width, width_y, num_layers]
 
         if args.data == 'concrete' or args.data == 'energy':
-            num_epochs = args.num_epochs
+            num_epochs = 20
         elif args.data == 'lv':
-            num_epochs = 1
+            num_epochs = 2
         else:
             num_epochs = 25
 

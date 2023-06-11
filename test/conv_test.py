@@ -70,7 +70,7 @@ if __name__ == "__main__":
     from src.icnn import PICNN
     x = torch.randn(100, 2).requires_grad_(True)
     y = torch.randn(100, 3).requires_grad_(True)
-    picnn = PICNN(3, 2, 128, 1, 6)
+    picnn = PICNN(3, 2, 128, 128, 1, 6)
     ConvTest1 = ConvTest(icnn=picnn)
     eig = ConvTest1.conv_test_picnn(x, y)
     print("Minimum Eigenvalue:", eig)

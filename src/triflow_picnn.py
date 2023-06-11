@@ -114,8 +114,8 @@ if __name__ == "__main__":
     from functorch import vmap, grad
     # checking the inverse
     from src.icnn import PICNN
-    picnn1 = PICNN(1, 1, 128, 1, 6)
-    picnn2 = PICNN(3, 2, 128, 1, 6)
+    picnn1 = PICNN(1, 1, 128, 128, 1, 6)
+    picnn2 = PICNN(3, 2, 128, 64, 1, 6)
     flow1 = TriFlowPICNN(prior=None, picnn=picnn1)
     flow2 = TriFlowPICNN(prior=None, picnn=picnn2)
     x1 = torch.randn(100, 1).view(-1, 1).requires_grad_(True)

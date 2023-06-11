@@ -25,6 +25,7 @@ parser.add_argument(
 parser.add_argument('--input_x_dim',    type=int, default=6, help="input data convex dimension")
 parser.add_argument('--input_y_dim',    type=int, default=5, help="input data non-convex dimension")
 parser.add_argument('--feature_dim',    type=int, default=64, help="intermediate layer feature dimension")
+parser.add_argument('--feature_y_dim',  type=int, default=5, help="intermediate layer context dimension")
 parser.add_argument('--out_dim',        type=int, default=1, help="output dimension")
 parser.add_argument('--num_layers_fi',  type=int, default=2, help="depth of FICNN network")
 parser.add_argument('--num_layers_pi',  type=int, default=2, help="depth of PICNN network")
@@ -173,7 +174,8 @@ if __name__ == '__main__':
 
     # establish TC-Flow
     ficnn = FICNN(args.input_y_dim, args.feature_dim, args.out_dim, args.num_layers_fi, reparam=reparam).to(device)
-    picnn = PICNN(args.input_x_dim, args.input_y_dim, args.feature_dim, args.out_dim, args.num_layers_pi, reparam=reparam).to(device)
+    picnn = PICNN(args.input_x_dim, args.input_y_dim, args.feature_dim, args.feature_y_dim,
+                  args.out_dim, args.num_layers_pi, reparam=reparam).to(device)
 
     flow_ficnn = TriFlowFICNN(prior_ficnn, ficnn).to(device)
     flow_picnn = TriFlowPICNN(prior_picnn, picnn).to(device)

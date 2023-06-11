@@ -29,7 +29,7 @@ parser.add_argument('--tol',            type=float, default=1e-12, help="LBFGS t
 parser.add_argument('--test_ratio',     type=float, default=0.10, help="test set ratio")
 parser.add_argument('--valid_ratio',    type=float, default=0.10, help="validation set ratio")
 parser.add_argument('--random_state',   type=int, default=42, help="random state for splitting dataset")
-parser.add_argument('--num_epochs',     type=int, default=3, help="pilot run number of epochs")
+parser.add_argument('--num_epochs',     type=int, default=4, help="pilot run number of epochs")
 
 parser.add_argument('--save',           type=str, default='experiments/tabjoint', help="define the save directory")
 
@@ -62,7 +62,7 @@ if __name__ == '__main__':
     batch_size_list = np.array([32, 64])
     lr_list = np.array([0.01, 0.005, 0.001])
 
-    for trial in range(50):
+    for trial in range(80):
 
         batch_size = int(np.random.choice(batch_size_list))
         train_loader, valid_loader, _, train_size = dataloader(args.data, batch_size, args.test_ratio,
@@ -75,6 +75,12 @@ if __name__ == '__main__':
             reparam = True
 
         width = np.random.choice(width_list)
+        width_y_list = [width]
+        feat_dim = width
+        while feat_dim >= args.input_y_dim:
+            feat_dim = feat_dim // 2
+            width_y_list.append(feat_dim)
+        width_y = np.random.choice(width_y_list)
         num_layers = np.random.choice(depth_list)
         lr = np.random.choice(lr_list)
 
@@ -86,7 +92,7 @@ if __name__ == '__main__':
 
         # establish TC-Flow
         ficnn = FICNN(args.input_y_dim, width, args.out_dim, num_layers, reparam=reparam).to(device)
-        picnn = PICNN(args.input_x_dim, args.input_y_dim, width, args.out_dim, num_layers, reparam=reparam).to(device)
+        picnn = PICNN(args.input_x_dim, args.input_y_dim, width, width_y, args.out_dim, num_layers, reparam=reparam).to(device)
 
         flow_ficnn = TriFlowFICNN(prior_ficnn, ficnn).to(device)
         flow_picnn = TriFlowPICNN(prior_picnn, picnn).to(device)
@@ -94,12 +100,12 @@ if __name__ == '__main__':
         optimizer1 = torch.optim.Adam(flow_ficnn.parameters(), lr=lr)
         optimizer2 = torch.optim.Adam(flow_picnn.parameters(), lr=lr)
 
-        params_hist.loc[len(params_hist.index)] = [batch_size, lr, width, num_layers]
+        params_hist.loc[len(params_hist.index)] = [batch_size, lr, width, width_y, num_layers]
 
         if args.data == 'parkinson' or args.data == 'wt_wine':
             num_epochs = args.num_epochs
         else:
-            num_epochs = 5
+            num_epochs = 8
 
         for epoch in range(num_epochs):
             for sample in train_loader:

@@ -96,8 +96,8 @@ class FICNN(nn.Module):
 
 class PICNN(nn.Module):
 
-    def __init__(self, input_x_dim: int, input_y_dim: int, feature_dim: int, out_dim: int,
-                 num_layers: int, act=F.softplus, act_v=nn.PReLU(num_parameters=1, init=0.01),
+    def __init__(self, input_x_dim: int, input_y_dim: int, feature_dim: int, feature_y_dim: int,
+                 out_dim: int, num_layers: int, act=F.softplus, act_v=nn.PReLU(num_parameters=1, init=0.01),
                  nonneg=F.relu, reparam=True) -> None:
         """
         Implementation of the Partially Input Convex Neural Networks (Amos et al., 2017)
@@ -107,6 +107,7 @@ class PICNN(nn.Module):
         :param input_x_dim: input data convex dimension
         :param input_y_dim: input data non-convex dimension
         :param feature_dim: intermediate feature dimension
+        :param feature_y_dim: intermediate context dimension
         :param out_dim: output dimension
         :param num_layers: number of layers
         :param act: choice of activation for w path
@@ -119,22 +120,23 @@ class PICNN(nn.Module):
         self.input_x_dim = input_x_dim
         self.input_y_dim = input_y_dim
         self.feature_dim = feature_dim
+        self.feature_y_dim = feature_y_dim
         self.out_dim = out_dim
         self.num_layers = num_layers
 
-        # forward path for v(x)
+        # forward path for v(y)
         Lv = list()
-        Lv.append(nn.Linear(input_y_dim, feature_dim, bias=True))
+        Lv.append(nn.Linear(input_y_dim, feature_y_dim, bias=True))
         for k in range(num_layers - 1):
-            Lv.append(nn.Linear(feature_dim, feature_dim, bias=True))
+            Lv.append(nn.Linear(feature_y_dim, feature_y_dim, bias=True))
         self.Lv = nn.ModuleList(Lv)
 
         # forward path for v into w
         Lvw = list()
         Lvw.append(nn.Linear(input_y_dim, feature_dim, bias=False))
         for k in range(num_layers - 1):
-            Lvw.append(nn.Linear(feature_dim, feature_dim, bias=False))
-        Lvw.append(nn.Linear(feature_dim, out_dim, bias=False))
+            Lvw.append(nn.Linear(feature_y_dim, feature_dim, bias=False))
+        Lvw.append(nn.Linear(feature_y_dim, out_dim, bias=False))
         self.Lvw = nn.ModuleList(Lvw)
 
         # forward path for w product, positive weights
@@ -161,13 +163,13 @@ class PICNN(nn.Module):
         Lwv = list()
         Lwv.append(nn.Linear(input_y_dim, input_x_dim, bias=True))
         for k in range(num_layers):
-            Lwv.append(nn.Linear(feature_dim, feature_dim, bias=True))
+            Lwv.append(nn.Linear(feature_y_dim, feature_dim, bias=True))
         self.Lwv = nn.ModuleList(Lwv)
 
         # context path for v times x
         Lxv = list()
         for k in range(num_layers):
-            Lxv.append(nn.Linear(feature_dim, input_x_dim, bias=True))
+            Lxv.append(nn.Linear(feature_y_dim, input_x_dim, bias=True))
         self.Lxv = nn.ModuleList(Lxv)
 
         # forward path for x product
@@ -226,6 +228,6 @@ class PICNN(nn.Module):
 if __name__ == "__main__":
 
     ficnn = FICNN(2, 256, 1, 3)
-    picnn = PICNN(3, 2, 256, 1, 3)
+    picnn = PICNN(3, 2, 256, 128, 1, 3)
     print(ficnn)
     print(picnn)

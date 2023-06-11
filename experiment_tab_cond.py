@@ -33,24 +33,30 @@ for i in range(10):
         width_con = int(param_con_list[i, 2])
         width_enr = int(param_enr_list[i, 2])
         width_yat = int(param_yat_list[i, 2])
-        num_layers_con = int(param_con_list[i, 3])
-        num_layers_enr = int(param_enr_list[i, 3])
-        num_layers_yat = int(param_yat_list[i, 3])
+        width_y_con = int(param_con_list[i, 3])
+        width_y_enr = int(param_enr_list[i, 3])
+        width_y_yat = int(param_yat_list[i, 3])
+        num_layers_con = int(param_con_list[i, 4])
+        num_layers_enr = int(param_enr_list[i, 4])
+        num_layers_yat = int(param_yat_list[i, 4])
 
         os.system(
             "python train_cond.py --data 'concrete' --valid_freq 20 --early_stopping 10  --input_x_dim 1 --input_y_dim 8\
-             --num_layers_pi " + str(num_layers_con) + " --feature_dim " + str(width_con) + " --batch_size " + str(
-             batch_size_con) + " --lr " + str(lr_con) + " --save 'experiments/tabcond/concrete'"
+             --num_layers_pi " + str(num_layers_con) + " --feature_dim " + str(width_con) + " --feature_y_dim " +
+            str(width_y_con) + " --batch_size " + str(batch_size_con) + " --lr " + str(lr_con) +
+            " --save 'experiments/tabcond/concrete'"
         )
 
         os.system(
             "python train_cond.py --data 'energy' --valid_freq 20 --early_stopping 10 --input_x_dim 1 --input_y_dim 9\
-             --num_layers_pi " + str(num_layers_enr) + " --feature_dim " + str(width_enr) + " --batch_size " + str(
-             batch_size_enr) + " --lr " + str(lr_enr) + " --save 'experiments/tabcond/energy'"
+             --num_layers_pi " + str(num_layers_enr) + " --feature_dim " + str(width_enr) + " --feature_y_dim " +
+            str(width_y_enr) + " --batch_size " + str(batch_size_enr) + " --lr " + str(lr_enr) +
+            " --save 'experiments/tabcond/energy'"
         )
 
         os.system(
             "python train_cond.py --data 'yacht' --valid_freq 20 --early_stopping 10 --input_x_dim 1 --input_y_dim 6\
-             --num_layers_pi " + str(num_layers_yat) + " --feature_dim " + str(width_yat) + " --batch_size " + str(
-             batch_size_yat) + " --lr " + str(lr_yat) + " --save 'experiments/tabcond/yacht'"
+             --num_layers_pi " + str(num_layers_yat) + " --feature_dim " + str(width_yat) + " --feature_y_dim " +
+            str(width_y_enr) + " --batch_size " + str(batch_size_yat) + " --lr " + str(lr_yat) +
+            " --save 'experiments/tabcond/yacht'"
         )

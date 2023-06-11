@@ -31,6 +31,7 @@ if __name__ == '__main__':
     input_x_dim = checkpt['args'].input_x_dim
     input_y_dim = checkpt['args'].input_y_dim
     feature_dim = checkpt['args'].feature_dim
+    feature_y_dim = checkpt['args'].feature_y_dim
     out_dim = checkpt['args'].out_dim
     num_layers_pi = checkpt['args'].num_layers_pi
     clip = checkpt['args'].clip
@@ -40,7 +41,7 @@ if __name__ == '__main__':
         reparam = True
 
     prior_picnn = distributions.MultivariateNormal(torch.zeros(input_x_dim).to(device), torch.eye(input_x_dim).to(device))
-    picnn = PICNN(input_x_dim, input_y_dim, feature_dim, out_dim, num_layers_pi, reparam=reparam).to(device)
+    picnn = PICNN(input_x_dim, input_y_dim, feature_dim, feature_y_dim, out_dim, num_layers_pi, reparam=reparam).to(device)
     flow_picnn = TriFlowPICNN(prior_picnn, picnn)
 
     flow_picnn.load_state_dict(checkpt["state_dict_picnn"])

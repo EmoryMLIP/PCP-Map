@@ -33,24 +33,28 @@ for i in range(10):
         width_pk = int(param_pk_list[i, 2])
         width_rd = int(param_rd_list[i, 2])
         width_wt = int(param_wt_list[i, 2])
-        num_layers_pk = int(param_pk_list[i, 3])
-        num_layers_rd = int(param_rd_list[i, 3])
-        num_layers_wt = int(param_wt_list[i, 3])
+        width_y_pk = int(param_pk_list[i, 3])
+        width_y_rd = int(param_rd_list[i, 3])
+        width_y_wt = int(param_wt_list[i, 3])
+        num_layers_pk = int(param_pk_list[i, 4])
+        num_layers_rd = int(param_rd_list[i, 4])
+        num_layers_wt = int(param_wt_list[i, 4])
 
         os.system(
             "python train_joint.py --data 'parkinson' --input_x_dim 8 --input_y_dim 7  --num_layers_fi " + str(
-             num_layers_pk) + " --num_layers_pi " + str(num_layers_pk) + " --feature_dim " + str(width_pk) + \
-            " --batch_size " + str(batch_size_pk) + " --lr " + str(lr_pk) + " --save 'experiments/tabjoint/parkinson'"
+             num_layers_pk) + " --num_layers_pi " + str(num_layers_pk) + " --feature_dim " + str(width_pk) +
+            " --feature_y_dim " + str(width_y_pk) + " --batch_size " + str(batch_size_pk) + " --lr " + str(lr_pk) +
+            " --save 'experiments/tabjoint/parkinson'"
         )
 
         os.system(
             "python train_joint.py --data 'rd_wine' --num_layers_fi " + str(num_layers_rd) + " --num_layers_pi " + str(
-             num_layers_rd) + " --feature_dim " + str(width_rd) + " --batch_size " + str(batch_size_rd) + " --lr " + str(
-             lr_rd) + " --save 'experiments/tabjoint/red'"
+             num_layers_rd) + " --feature_dim " + str(width_rd) + " --feature_y_dim " + str(width_y_rd) +
+            " --batch_size " + str(batch_size_rd) + " --lr " + str(lr_rd) + " --save 'experiments/tabjoint/red'"
         )
 
         os.system(
             "python train_joint.py --data 'wt_wine' --num_layers_fi " + str(num_layers_wt) + " --num_layers_pi " + str(
-             num_layers_wt) + " --feature_dim " + str(width_wt) + " --batch_size " + str(batch_size_wt) + " --lr " + str(
-             lr_wt) + " --save 'experiments/tabjoint/white'"
+             num_layers_wt) + " --feature_dim " + str(width_wt) + " --feature_y_dim " + str(width_y_wt) +
+            " --batch_size " + str(batch_size_wt) + " --lr " + str(lr_wt) + " --save 'experiments/tabjoint/white'"
         )
