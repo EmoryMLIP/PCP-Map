@@ -29,7 +29,7 @@ parser.add_argument('--tol',            type=float, default=1e-12, help="LBFGS t
 parser.add_argument('--test_ratio',     type=float, default=0.10, help="test set ratio")
 parser.add_argument('--valid_ratio',    type=float, default=0.10, help="validation set ratio")
 parser.add_argument('--random_state',   type=int, default=42, help="random state for splitting dataset")
-parser.add_argument('--num_epochs',     type=int, default=4, help="pilot run number of epochs")
+parser.add_argument('--num_epochs',     type=int, default=3, help="pilot run number of epochs")
 
 parser.add_argument('--save',           type=str, default='experiments/tabjoint', help="define the save directory")
 
@@ -48,7 +48,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 if __name__ == '__main__':
 
-    columns_params = ["batchsz", "lr", "width", "depth"]
+    columns_params = ["batchsz", "lr", "width", "width_y", "depth"]
     columns_valid = ["ficnn_nll", "picnn_nll", "tot_nll"]
     params_hist = pd.DataFrame(columns=columns_params)
     valid_hist = pd.DataFrame(columns=columns_valid)
@@ -62,7 +62,7 @@ if __name__ == '__main__':
     batch_size_list = np.array([32, 64])
     lr_list = np.array([0.01, 0.005, 0.001])
 
-    for trial in range(80):
+    for trial in range(100):
 
         batch_size = int(np.random.choice(batch_size_list))
         train_loader, valid_loader, _, train_size = dataloader(args.data, batch_size, args.test_ratio,
@@ -75,7 +75,7 @@ if __name__ == '__main__':
             reparam = True
 
         width = np.random.choice(width_list)
-        width_y_list = [width]
+        width_y_list = [width, args.input_y_dim]
         feat_dim = width
         while feat_dim >= args.input_y_dim:
             feat_dim = feat_dim // 2
@@ -105,7 +105,7 @@ if __name__ == '__main__':
         if args.data == 'parkinson' or args.data == 'wt_wine':
             num_epochs = args.num_epochs
         else:
-            num_epochs = 8
+            num_epochs = 5
 
         for epoch in range(num_epochs):
             for sample in train_loader:

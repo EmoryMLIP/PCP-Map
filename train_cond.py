@@ -278,9 +278,9 @@ if __name__ == '__main__':
                         exit(0)
                     NLL, MMD = evaluate_model(flow_picnn, args.data, args.batch_size, args.test_ratio, args.valid_ratio,
                                               args.random_state, args.input_y_dim, args.input_x_dim, args.tol, bestParams_picnn)
-                    columns_test = ["batch_size", "lr", "width", "depth", "NLL", "MMD", "time", "iter"]
+                    columns_test = ["batch_size", "lr", "width", "width_y", "depth", "NLL", "MMD", "time", "iter"]
                     test_hist = pd.DataFrame(columns=columns_test)
-                    test_hist.loc[len(test_hist.index)] = [args.batch_size, args.lr, args.feature_dim,
+                    test_hist.loc[len(test_hist.index)] = [args.batch_size, args.lr, args.feature_dim, args.feature_y_dim,
                                                            args.num_layers_pi, NLL, MMD, timeMeter.sum, itr]
                     testfile_name = '.../PCPM/experiments/tabcond/' + args.data + '_test_hist.csv'
                     if os.path.isfile(testfile_name):
@@ -303,9 +303,9 @@ if __name__ == '__main__':
     NLL, MMD = evaluate_model(flow_picnn, args.data, args.batch_size, args.test_ratio, args.valid_ratio,
                               args.random_state, args.input_y_dim, args.input_x_dim, args.tol, bestParams_picnn)
 
-    columns_test = ["batch_size", "lr", "width", "depth", "NLL", "MMD", "time", "iter"]
+    columns_test = ["batch_size", "lr", "width", "width_y", "depth", "NLL", "MMD", "time", "iter"]
     test_hist = pd.DataFrame(columns=columns_test)
-    test_hist.loc[len(test_hist.index)] = [args.batch_size, args.lr, args.feature_dim, args.num_layers_pi, NLL, MMD,
+    test_hist.loc[len(test_hist.index)] = [args.batch_size, args.lr, args.feature_dim, args.feature_y_dim, args.num_layers_pi, NLL, MMD,
                                            timeMeter.sum, itr]
     testfile_name = '.../PCPM/experiments/tabcond/' + args.data + '_test_hist.csv'
     if os.path.isfile(testfile_name):

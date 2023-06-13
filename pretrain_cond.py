@@ -31,7 +31,7 @@ parser.add_argument('--tol',            type=float, default=1e-12, help="LBFGS t
 parser.add_argument('--test_ratio',     type=float, default=0.10, help="test set ratio")
 parser.add_argument('--valid_ratio',    type=float, default=0.10, help="validation set ratio")
 parser.add_argument('--random_state',   type=int, default=42, help="random state for splitting dataset")
-parser.add_argument('--num_epochs',     type=int, default=10, help="pilot run number of epochs")
+parser.add_argument('--num_epochs',     type=int, default=15, help="pilot run number of epochs")
 
 parser.add_argument('--save',           type=str, default='experiments/tabcond', help="define the save directory")
 
@@ -108,7 +108,7 @@ if __name__ == '__main__':
         batch_size_list = np.array([32, 64])
     lr_list = np.array([0.01, 0.005, 0.001])
 
-    for trial in range(80):
+    for trial in range(100):
 
         batch_size = int(np.random.choice(batch_size_list))
         train_loader, valid_loader, _ = load_data(args.data, args.test_ratio, args.valid_ratio,
@@ -124,7 +124,7 @@ if __name__ == '__main__':
         if args.data == "lv":
             width_y = width
         else:
-            width_y_list = [width]
+            width_y_list = [width, args.input_y_dim]
             feat_dim = width
             while feat_dim >= args.input_y_dim:
                 feat_dim = feat_dim // 2
@@ -145,11 +145,11 @@ if __name__ == '__main__':
         params_hist.loc[len(params_hist.index)] = [batch_size, lr, width, width_y, num_layers]
 
         if args.data == 'concrete' or args.data == 'energy':
-            num_epochs = 20
+            num_epochs = args.num_epochs
         elif args.data == 'lv':
             num_epochs = 2
         else:
-            num_epochs = 25
+            num_epochs = 20
 
         for epoch in range(num_epochs):
             for sample in train_loader:

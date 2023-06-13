@@ -57,6 +57,6 @@ for i in range(10):
         os.system(
             "python train_cond.py --data 'yacht' --valid_freq 20 --early_stopping 10 --input_x_dim 1 --input_y_dim 6\
              --num_layers_pi " + str(num_layers_yat) + " --feature_dim " + str(width_yat) + " --feature_y_dim " +
-            str(width_y_enr) + " --batch_size " + str(batch_size_yat) + " --lr " + str(lr_yat) +
+            str(width_y_yat) + " --batch_size " + str(batch_size_yat) + " --lr " + str(lr_yat) +
             " --save 'experiments/tabcond/yacht'"
         )
