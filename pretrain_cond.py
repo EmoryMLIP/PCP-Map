@@ -126,7 +126,7 @@ if __name__ == '__main__':
         else:
             width_y_list = [width, args.input_y_dim]
             feat_dim = width
-            while feat_dim >= args.input_y_dim:
+            while feat_dim // 2 > args.input_y_dim:
                 feat_dim = feat_dim // 2
                 width_y_list.append(feat_dim)
             width_y = np.random.choice(width_y_list)
@@ -144,12 +144,10 @@ if __name__ == '__main__':
 
         params_hist.loc[len(params_hist.index)] = [batch_size, lr, width, width_y, num_layers]
 
-        if args.data == 'concrete' or args.data == 'energy':
-            num_epochs = args.num_epochs
-        elif args.data == 'lv':
+        if args.data == 'lv':
             num_epochs = 2
         else:
-            num_epochs = 20
+            num_epochs = args.num_epochs
 
         for epoch in range(num_epochs):
             for sample in train_loader:

@@ -211,16 +211,15 @@ if __name__ == '__main__':
     bestParams_ficnn = None
     bestParams_picnn = None
 
-    start_time = time.time()
-    end = start_time
     makedirs(args.save)
-
     timeMeter = AverageMeter()
 
     for epoch in range(args.num_epochs):
         for i, sample in enumerate(train_loader):
             x = sample[:, args.input_y_dim:].requires_grad_(True).to(device)
             y = sample[:, :args.input_y_dim].requires_grad_(True).to(device)
+
+            end = time.time()
 
             # optimizer step for flow1
             optimizer1.zero_grad()
@@ -363,7 +362,6 @@ if __name__ == '__main__':
                     n_vals_wo_improve_picnn = 0
 
             itr += 1
-            end = time.time()
 
     print('Training time: %.2f secs' % timeMeter.sum)
     train_hist.to_csv(os.path.join(args.save, '%s_train_hist.csv' % strTitle))

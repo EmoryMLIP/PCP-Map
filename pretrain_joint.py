@@ -77,7 +77,7 @@ if __name__ == '__main__':
         width = np.random.choice(width_list)
         width_y_list = [width, args.input_y_dim]
         feat_dim = width
-        while feat_dim >= args.input_y_dim:
+        while feat_dim // 2 > args.input_y_dim:
             feat_dim = feat_dim // 2
             width_y_list.append(feat_dim)
         width_y = np.random.choice(width_y_list)
@@ -105,7 +105,7 @@ if __name__ == '__main__':
         if args.data == 'parkinson' or args.data == 'wt_wine':
             num_epochs = args.num_epochs
         else:
-            num_epochs = 5
+            num_epochs = 4
 
         for epoch in range(num_epochs):
             for sample in train_loader:

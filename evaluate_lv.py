@@ -45,12 +45,23 @@ def experiment(LV, abc_dat_path, theta_star, flow):
     plt.savefig(sPath, dpi=300)
     plt.close()
 
+    # plot for ABC
+    theta_abc = np.array(abc_sample['all_x'])[-1]
+    theta_abc = theta_abc.reshape(-1, 4)
+    theta_abc = np.log(theta_abc)
+    plot_matrix(theta_abc, log_limits, xtrue=theta_star_log, symbols=symbols)
+    sPath = os.path.join(checkpt['args'].save, 'figs', checkpt['args'].data + '_' + str(theta_star[0].item()) + '_abc.png')
+    if not os.path.exists(os.path.dirname(sPath)):
+        os.makedirs(os.path.dirname(sPath))
+    plt.savefig(sPath, dpi=300)
+    plt.close()
+
     # plot posterior predictive
     plt.figure()
     ytrue = LV.simulate(theta_star)
     c1 = plt.plot(LV.tt, ytrue[:, 0], '-', label='Predators')
     c2 = plt.plot(LV.tt, ytrue[:, 1], '-', label='Prey')
-    for i in range(10):
+    for _ in range(10):
         rand_sample = np.random.randint(low=0, high=2000, size=(1,))[0]
         xi = np.exp(theta_gen[rand_sample, :])
         yt = LV.simulate(xi)
@@ -62,6 +73,28 @@ def experiment(LV, abc_dat_path, theta_star, flow):
     plt.xlim(0, 20)
     sPath = os.path.join(checkpt['args'].save, 'figs',
                          checkpt['args'].data + '_' + str(theta_star[0].item()) + '_post.png')
+    if not os.path.exists(os.path.dirname(sPath)):
+        os.makedirs(os.path.dirname(sPath))
+    plt.savefig(sPath, dpi=300)
+    plt.close()
+
+    # plot ABC posterior predictive
+    plt.figure()
+    ytrue = LV.simulate(theta_star)
+    c1 = plt.plot(LV.tt, ytrue[:, 0], '-', label='Predators')
+    c2 = plt.plot(LV.tt, ytrue[:, 1], '-', label='Prey')
+    for _ in range(10):
+        rand_sample = np.random.randint(low=0, high=2000, size=(1,))[0]
+        xi = np.exp(theta_abc[rand_sample, :])
+        yt = LV.simulate(xi)
+        plt.plot(LV.tt, yt[:, 0], '--', color=c1[0].get_color(), alpha=0.3)
+        plt.plot(LV.tt, yt[:, 1], '--', color=c2[0].get_color(), alpha=0.3)
+    plt.xlabel('$t$', size=20)
+    plt.ylabel('$Z(t)$', size=20)
+    plt.legend(loc='upper right')
+    plt.xlim(0, 20)
+    sPath = os.path.join(checkpt['args'].save, 'figs',
+                         checkpt['args'].data + '_' + str(theta_star[0].item()) + '_abc_post.png')
     if not os.path.exists(os.path.dirname(sPath)):
         os.makedirs(os.path.dirname(sPath))
     plt.savefig(sPath, dpi=300)

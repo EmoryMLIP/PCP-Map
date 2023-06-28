@@ -194,10 +194,7 @@ if __name__ == '__main__':
     best_loss_picnn = float('inf')
     bestParams_picnn = None
 
-    start_time = time.time()
-    end = start_time
     makedirs(args.save)
-
     timeMeter = AverageMeter()
 
     for epoch in range(args.num_epochs):
@@ -208,6 +205,8 @@ if __name__ == '__main__':
             else:
                 x = sample[:, args.input_y_dim:].requires_grad_(True).to(device)
                 y = sample[:, :args.input_y_dim].requires_grad_(True).to(device)
+
+            end = time.time()
 
             # optimizer step for picnn flow
             optimizer.zero_grad()
@@ -293,7 +292,6 @@ if __name__ == '__main__':
                     n_vals_wo_improve_picnn = 0
 
             itr += 1
-            end = time.time()
 
     print('Training time: %.2f secs' % timeMeter.sum)
     train_hist.to_csv(os.path.join(args.save, '%s_train_hist.csv' % strTitle))
