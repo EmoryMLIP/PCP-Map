@@ -9,8 +9,8 @@ from torch.utils.data import DataLoader
 from lib.dataloader import dataloader
 from datasets import tabular_data
 from src.icnn import FICNN, PICNN
-from src.triflow_ficnn import TriFlowFICNN
-from src.triflow_picnn import TriFlowPICNN
+from src.mapficnn import MapFICNN
+from src.pcpmap import PCPMap
 from src.mmd import mmd
 from lib.utils import count_parameters, makedirs, get_logger, AverageMeter
 
@@ -139,9 +139,9 @@ def evaluate_model(ficnn_model, picnn_model, data, batch_size, test_ratio, valid
     sample_size = dat.shape[0]
     zy = torch.randn(sample_size, input_y_dim).to(device)
     zx = torch.randn(sample_size, input_x_dim).to(device)
-    y_generated, _ = ficnn_model.g1(zy, tol=tol)
+    y_generated, _ = ficnn_model.gy(zy, tol=tol)
     y_generated = y_generated.detach().to(device)
-    x_generated, _ = picnn_model.g2(zx, y_generated, tol=tol)
+    x_generated, _ = picnn_model.gx(zx, y_generated, tol=tol)
     x_generated = x_generated.detach().to(device)
     sample = torch.cat((y_generated, x_generated), dim=1)
     # calculate MMD statistic
@@ -160,7 +160,6 @@ if __name__ == '__main__':
     train_loader, valid_loader, _, train_size = dataloader(args.data, args.batch_size, args.test_ratio,
                                                            args.valid_ratio, args.random_state)
 
-    # Establishing TC-Flows
     if args.clip is True:
         reparam = False
     else:
@@ -172,16 +171,16 @@ if __name__ == '__main__':
     prior_picnn = distributions.MultivariateNormal(torch.zeros(args.input_x_dim).to(device),
                                                    torch.eye(args.input_x_dim).to(device))
 
-    # establish TC-Flow
+    # build FICNN map and PCP-Map
     ficnn = FICNN(args.input_y_dim, args.feature_dim, args.out_dim, args.num_layers_fi, reparam=reparam).to(device)
     picnn = PICNN(args.input_x_dim, args.input_y_dim, args.feature_dim, args.feature_y_dim,
                   args.out_dim, args.num_layers_pi, reparam=reparam).to(device)
 
-    flow_ficnn = TriFlowFICNN(prior_ficnn, ficnn).to(device)
-    flow_picnn = TriFlowPICNN(prior_picnn, picnn).to(device)
+    map_ficnn = MapFICNN(prior_ficnn, ficnn).to(device)
+    map_picnn = PCPMap(prior_picnn, picnn).to(device)
 
-    optimizer1 = torch.optim.Adam(flow_ficnn.parameters(), lr=args.lr)
-    optimizer2 = torch.optim.Adam(flow_picnn.parameters(), lr=args.lr)
+    optimizer1 = torch.optim.Adam(map_ficnn.parameters(), lr=args.lr)
+    optimizer2 = torch.optim.Adam(map_picnn.parameters(), lr=args.lr)
 
     strTitle = args.data + '_' + sStartTime + '_' + str(args.batch_size) + '_' + str(args.lr) + \
             '_' + str(args.num_layers_fi) + '_' + str(args.feature_dim)
@@ -221,29 +220,29 @@ if __name__ == '__main__':
 
             end = time.time()
 
-            # optimizer step for flow1
+            # optimizer step for FICNN map
             optimizer1.zero_grad()
-            loss1 = -flow_ficnn.loglik_ficnn(y).mean()
+            loss1 = -map_ficnn.loglik_ficnn(y).mean()
             loss1.backward()
             optimizer1.step()
 
             # non-negative constraint
             if args.clip is True:
-                for lz in flow_ficnn.ficnn.Lz:
+                for lz in map_ficnn.ficnn.Lz:
                     with torch.no_grad():
-                        lz.weight.data = flow_ficnn.ficnn.nonneg(lz.weight)
+                        lz.weight.data = map_ficnn.ficnn.nonneg(lz.weight)
 
-            # optimizer step for flow2
+            # optimizer step for PCP-Map
             optimizer2.zero_grad()
-            loss2 = -flow_picnn.loglik_picnn(x, y).mean()
+            loss2 = -map_picnn.loglik_picnn(x, y).mean()
             loss2.backward()
             optimizer2.step()
 
             # non-negative constraint
             if args.clip is True:
-                for lw in flow_picnn.picnn.Lw:
+                for lw in map_picnn.picnn.Lw:
                     with torch.no_grad():
-                        lw.weight.data = flow_picnn.picnn.nonneg(lw.weight)
+                        lw.weight.data = map_picnn.picnn.nonneg(lw.weight)
 
             timeMeter.update(time.time() - end)
 
@@ -266,8 +265,8 @@ if __name__ == '__main__':
                 for valid_sample in valid_loader:
                     x_valid = valid_sample[:, args.input_y_dim:].requires_grad_(True).to(device)
                     y_valid = valid_sample[:, :args.input_y_dim].requires_grad_(True).to(device)
-                    mean_valid_loss_ficnn = -flow_ficnn.loglik_ficnn(y_valid).mean()
-                    mean_valid_loss_picnn = -flow_picnn.loglik_picnn(x_valid, y_valid).mean()
+                    mean_valid_loss_ficnn = -map_ficnn.loglik_ficnn(y_valid).mean()
+                    mean_valid_loss_picnn = -map_picnn.loglik_picnn(x_valid, y_valid).mean()
                     valLossMeterFICNN.update(mean_valid_loss_ficnn.item(), valid_sample.shape[0])
                     valLossMeterPICNN.update(mean_valid_loss_picnn.item(), valid_sample.shape[0])
 
@@ -280,7 +279,7 @@ if __name__ == '__main__':
                     n_vals_wo_improve_ficnn = 0
                     best_loss_ficnn = valLossMeterFICNN.avg
                     makedirs(args.save)
-                    bestParams_ficnn = flow_ficnn.state_dict()
+                    bestParams_ficnn = map_ficnn.state_dict()
                     torch.save({
                         'args': args,
                         'state_dict_ficnn': bestParams_ficnn,
@@ -295,7 +294,7 @@ if __name__ == '__main__':
                     n_vals_wo_improve_picnn = 0
                     best_loss_picnn = valLossMeterPICNN.avg
                     makedirs(args.save)
-                    bestParams_picnn = flow_picnn.state_dict()
+                    bestParams_picnn = map_picnn.state_dict()
                     torch.save({
                         'args': args,
                         'state_dict_ficnn': bestParams_ficnn,
@@ -319,7 +318,7 @@ if __name__ == '__main__':
                     valid_hist.to_csv(os.path.join(args.save, '%s_valid_hist.csv' % strTitle))
                     if args.save_test is False:
                         exit(0)
-                    NLL, MMD = evaluate_model(flow_ficnn, flow_picnn, args.data, args.batch_size, args.test_ratio,
+                    NLL, MMD = evaluate_model(map_ficnn, map_picnn, args.data, args.batch_size, args.test_ratio,
                                               args.valid_ratio, args.random_state, args.input_y_dim, args.input_x_dim,
                                               args.tol, bestParams_ficnn, bestParams_picnn)
                     columns_test = ["batch_size", "lr", "width", "width_y", "depth", "NLL", "MMD", "time", "iter"]
@@ -344,7 +343,7 @@ if __name__ == '__main__':
                     valid_hist.to_csv(os.path.join(args.save, '%s_valid_hist.csv' % strTitle))
                     if args.save_test is False:
                         exit(0)
-                    NLL, MMD = evaluate_model(flow_ficnn, flow_picnn, args.data, args.batch_size, args.test_ratio,
+                    NLL, MMD = evaluate_model(map_ficnn, map_picnn, args.data, args.batch_size, args.test_ratio,
                                               args.valid_ratio, args.random_state, args.input_y_dim, args.input_x_dim,
                                               args.tol, bestParams_ficnn, bestParams_picnn)
                     columns_test = ["batch_size", "lr", "width", "width_y", "depth", "NLL", "MMD", "time", "iter"]
@@ -368,7 +367,7 @@ if __name__ == '__main__':
     valid_hist.to_csv(os.path.join(args.save, '%s_valid_hist.csv' % strTitle))
     if args.save_test is False:
         exit(0)
-    NLL, MMD = evaluate_model(flow_ficnn, flow_picnn, args.data, args.batch_size, args.test_ratio,
+    NLL, MMD = evaluate_model(map_ficnn, map_picnn, args.data, args.batch_size, args.test_ratio,
                               args.valid_ratio, args.random_state, args.input_y_dim, args.input_x_dim,
                               args.tol, bestParams_ficnn, bestParams_picnn)
     columns_test = ["batch_size", "lr", "width", "width_y", "depth", "NLL", "MMD", "time", "iter"]

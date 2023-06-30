@@ -11,7 +11,7 @@ from lib.dataloader import dataloader
 from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
 from src.icnn import PICNN
-from src.triflow_picnn import TriFlowPICNN
+from src.pcpmap import PCPMap
 from src.mmd import mmd
 from lib.utils import count_parameters, makedirs, get_logger, AverageMeter
 
@@ -19,7 +19,7 @@ from lib.utils import count_parameters, makedirs, get_logger, AverageMeter
 argument parser for hyper parameters and model handling
 """
 
-parser = argparse.ArgumentParser('PCPM')
+parser = argparse.ArgumentParser('PCP-Map')
 parser.add_argument(
     '--data', choices=['concrete', 'energy', 'yacht', 'lv'], type=str, default='lv'
 )
@@ -135,7 +135,7 @@ def evaluate_model(model, data, batch_size, test_ratio, valid_ratio, random_stat
     pb_mean_NLL = -log_prob_picnn.mean()
     # Calculate MMD
     zx = torch.randn(testData.shape[0], input_x_dim).to(device)
-    x_generated, _ = flow_picnn.g2(zx, testData[:, :input_y_dim].to(device), tol=tol)
+    x_generated, _ = model.gx(zx, testData[:, :input_y_dim].to(device), tol=tol)
     x_generated = x_generated.detach().to(device)
     mean_max_dis = mmd(x_generated, testData[:, input_y_dim:])
 
@@ -165,9 +165,9 @@ if __name__ == '__main__':
     # Establishing TC-Flow
     picnn = PICNN(args.input_x_dim, args.input_y_dim, args.feature_dim, args.feature_y_dim,
                   args.out_dim, args.num_layers_pi, reparam=reparam).to(device)
-    flow_picnn = TriFlowPICNN(prior_picnn, picnn).to(device)
+    map_picnn = PCPMap(prior_picnn, picnn).to(device)
 
-    optimizer = torch.optim.Adam(flow_picnn.parameters(), lr=args.lr)
+    optimizer = torch.optim.Adam(map_picnn.parameters(), lr=args.lr)
 
     strTitle = args.data + '_' + sStartTime + '_' + str(args.batch_size) + '_' + str(args.lr) + \
             '_' + str(args.num_layers_pi) + '_' + str(args.feature_dim)
@@ -210,15 +210,15 @@ if __name__ == '__main__':
 
             # optimizer step for picnn flow
             optimizer.zero_grad()
-            loss = -flow_picnn.loglik_picnn(x, y).mean()
+            loss = -map_picnn.loglik_picnn(x, y).mean()
             loss.backward()
             optimizer.step()
 
             # non-negative constraint
             if args.clip is True:
-                for lw in flow_picnn.picnn.Lw:
+                for lw in map_picnn.picnn.Lw:
                     with torch.no_grad():
-                        lw.weight.data = flow_picnn.picnn.nonneg(lw.weight)
+                        lw.weight.data = map_picnn.picnn.nonneg(lw.weight)
 
             timeMeter.update(time.time() - end)
             train_hist.loc[len(train_hist.index)] = [epoch + 1, i + 1, loss.item()]
@@ -243,7 +243,7 @@ if __name__ == '__main__':
                     else:
                         x_valid = valid_sample[:, args.input_y_dim:].requires_grad_(True).to(device)
                         y_valid = valid_sample[:, :args.input_y_dim].requires_grad_(True).to(device)
-                    mean_valid_loss_picnn = -flow_picnn.loglik_picnn(x_valid, y_valid).mean()
+                    mean_valid_loss_picnn = -map_picnn.loglik_picnn(x_valid, y_valid).mean()
                     valLossMeterPICNN.update(mean_valid_loss_picnn.item(), valid_sample.shape[0])
 
                 valid_hist.loc[len(valid_hist.index)] = [valLossMeterPICNN.avg]
@@ -253,7 +253,7 @@ if __name__ == '__main__':
                     n_vals_wo_improve_picnn = 0
                     best_loss_picnn = valLossMeterPICNN.avg
                     makedirs(args.save)
-                    bestParams_picnn = flow_picnn.state_dict()
+                    bestParams_picnn = map_picnn.state_dict()
                     torch.save({
                         'args': args,
                         'state_dict_picnn': bestParams_picnn,
@@ -275,7 +275,7 @@ if __name__ == '__main__':
                     valid_hist.to_csv(os.path.join(args.save, '%s_valid_hist.csv' % strTitle))
                     if args.save_test is False:
                         exit(0)
-                    NLL, MMD = evaluate_model(flow_picnn, args.data, args.batch_size, args.test_ratio, args.valid_ratio,
+                    NLL, MMD = evaluate_model(map_picnn, args.data, args.batch_size, args.test_ratio, args.valid_ratio,
                                               args.random_state, args.input_y_dim, args.input_x_dim, args.tol, bestParams_picnn)
                     columns_test = ["batch_size", "lr", "width", "width_y", "depth", "NLL", "MMD", "time", "iter"]
                     test_hist = pd.DataFrame(columns=columns_test)
@@ -298,7 +298,7 @@ if __name__ == '__main__':
     valid_hist.to_csv(os.path.join(args.save, '%s_valid_hist.csv' % strTitle))
     if args.save_test is False:
         exit(0)
-    NLL, MMD = evaluate_model(flow_picnn, args.data, args.batch_size, args.test_ratio, args.valid_ratio,
+    NLL, MMD = evaluate_model(map_picnn, args.data, args.batch_size, args.test_ratio, args.valid_ratio,
                               args.random_state, args.input_y_dim, args.input_x_dim, args.tol, bestParams_picnn)
 
     columns_test = ["batch_size", "lr", "width", "width_y", "depth", "NLL", "MMD", "time", "iter"]

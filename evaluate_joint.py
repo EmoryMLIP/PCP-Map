@@ -7,12 +7,12 @@ from lib.dataloader import dataloader
 from datasets import tabular_data
 from src.plotter import plot4_tabular
 from src.icnn import FICNN, PICNN
-from src.triflow_ficnn import TriFlowFICNN
-from src.triflow_picnn import TriFlowPICNN
+from src.mapficnn import MapFICNN
+from src.pcpmap import PCPMap
 from src.mmd import mmd
 from lib.utils import AverageMeter
 
-parser = argparse.ArgumentParser('PCPM')
+parser = argparse.ArgumentParser('PCP-Map')
 parser.add_argument('--resume',         type=str, default="experiments/tabular/rd_wine_2022_11_09_20_17_42_checkpt.pth")
 
 args = parser.parse_args()
@@ -71,13 +71,13 @@ if __name__ == '__main__':
                                                    torch.eye(input_x_dim).to(device))
     ficnn = FICNN(input_y_dim, feature_dim, out_dim, num_layers_fi, reparam=reparam).to(device)
     picnn = PICNN(input_x_dim, input_y_dim, feature_dim, feature_y_dim, out_dim, num_layers_pi, reparam=reparam).to(device)
-    flow_ficnn = TriFlowFICNN(prior_ficnn, ficnn)
-    flow_picnn = TriFlowPICNN(prior_picnn, picnn)
+    map_ficnn = MapFICNN(prior_ficnn, ficnn)
+    map_picnn = PCPMap(prior_picnn, picnn)
 
-    flow_ficnn.load_state_dict(checkpt["state_dict_ficnn"])
-    flow_picnn.load_state_dict(checkpt["state_dict_picnn"])
-    flow_ficnn = flow_ficnn.to(device)
-    flow_picnn = flow_picnn.to(device)
+    map_ficnn.load_state_dict(checkpt["state_dict_ficnn"])
+    map_picnn.load_state_dict(checkpt["state_dict_picnn"])
+    map_ficnn = map_ficnn.to(device)
+    map_picnn = map_picnn.to(device)
 
     # load test data
     test_loader = DataLoader(
@@ -91,8 +91,8 @@ if __name__ == '__main__':
     for test_sample in test_loader:
         x_test = test_sample[:, input_y_dim:].requires_grad_(True).to(device)
         y_test = test_sample[:, :input_y_dim].requires_grad_(True).to(device)
-        log_prob1 = flow_ficnn.loglik_ficnn(y_test)
-        log_prob2 = flow_picnn.loglik_picnn(x_test, y_test)
+        log_prob1 = map_ficnn.loglik_ficnn(y_test)
+        log_prob2 = map_picnn.loglik_picnn(x_test, y_test)
         pb_mean_NLL = -(log_prob1 + log_prob2).mean()
         testLossMeter.update(pb_mean_NLL.item(), test_sample.shape[0])
     print('Mean Negative Log Likelihood: {:.3e}'.format(testLossMeter.avg))
@@ -100,17 +100,17 @@ if __name__ == '__main__':
     # Gaussian Pullback
     x_test_tot = test_data[:, input_y_dim:].requires_grad_(True).to(device)
     y_test_tot = test_data[:, :input_y_dim].requires_grad_(True).to(device)
-    zy_approx = flow_ficnn.g1inv(y_test_tot).detach()
-    zx_approx = flow_picnn.g2inv(x_test_tot, y_test_tot).detach()
+    zy_approx = map_ficnn.gyinv(y_test_tot).detach()
+    zx_approx = map_picnn.gxinv(x_test_tot, y_test_tot).detach()
     z = torch.cat((zy_approx, zx_approx), dim=1)
 
     # Test Generated Samples
     sample_size = dat.shape[0]
     zy = torch.randn(sample_size, input_y_dim).to(device)
     zx = torch.randn(sample_size, input_x_dim).to(device)
-    y_generated, _ = flow_ficnn.g1(zy, tol=checkpt['args'].tol)
+    y_generated, _ = map_ficnn.gy(zy, tol=checkpt['args'].tol)
     y_generated = y_generated.detach().to(device)
-    x_generated, _ = flow_picnn.g2(zx, y_generated, tol=checkpt['args'].tol)
+    x_generated, _ = map_picnn.gx(zx, y_generated, tol=checkpt['args'].tol)
     x_generated = x_generated.detach().to(device)
     sample = torch.cat((y_generated, x_generated), dim=1)
 

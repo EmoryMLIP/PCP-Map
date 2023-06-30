@@ -1,6 +1,6 @@
 import torch
-from src.triflow_ficnn import TriFlowFICNN
-from src.triflow_picnn import TriFlowPICNN
+from src.mapficnn import MapFICNN
+from src.pcpmap import PCPMap
 
 
 class ConvTest:
@@ -21,11 +21,11 @@ class ConvTest:
         :param x: the first i-1 / first block component of target sample x
         :return: minimum of hessian / eigenvalues of hessian
         """
-        flow = TriFlowFICNN(None, self.icnn)
+        mapficnn = MapFICNN(None, self.icnn)
 
         def closure():
             optimizer.zero_grad()
-            hessian = flow.g1inv_grad(x)
+            hessian = mapficnn.gyinv_grad(x)
             if x.shape[1] > 1:
                 loss = torch.min(torch.linalg.eigvalsh(hessian))
             else:
@@ -33,7 +33,7 @@ class ConvTest:
             loss.backward()
             return loss
 
-        optimizer = torch.optim.LBFGS(flow.parameters(), line_search_fn="strong_wolfe",
+        optimizer = torch.optim.LBFGS(mapficnn.parameters(), line_search_fn="strong_wolfe",
                                       max_iter=1000000)
         optimizer.step(closure)
         eig_min = closure()
@@ -46,11 +46,11 @@ class ConvTest:
         :param y: input-convex component
         :return: minimum of hessian / eigenvalues of hessian
         """
-        flow = TriFlowPICNN(None, self.icnn)
+        mappicnn = PCPMap(None, self.icnn)
 
         def closure():
             optimizer.zero_grad()
-            hessian = flow.g2inv_grad(y, x)
+            hessian = mappicnn.gxinv_grad(y, x)
             if y.shape[1] > 1:
                 loss = torch.min(torch.linalg.eigvalsh(hessian))
             else:
@@ -58,7 +58,7 @@ class ConvTest:
             loss.backward()
             return loss
 
-        optimizer = torch.optim.LBFGS(flow.parameters(), line_search_fn="strong_wolfe",
+        optimizer = torch.optim.LBFGS(mappicnn.parameters(), line_search_fn="strong_wolfe",
                                       max_iter=1000000)
         optimizer.step(closure)
         eig_min = closure()

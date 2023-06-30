@@ -7,15 +7,15 @@ import torch
 from torch import distributions
 from lib.dataloader import dataloader
 from src.icnn import FICNN, PICNN
-from src.triflow_ficnn import TriFlowFICNN
-from src.triflow_picnn import TriFlowPICNN
+from src.mapficnn import MapFICNN
+from src.pcpmap import PCPMap
 from lib.utils import makedirs, get_logger, AverageMeter
 
 """
 argument parser for hyper parameters and model handling
 """
 
-parser = argparse.ArgumentParser('PCPM')
+parser = argparse.ArgumentParser('PCP-Map')
 parser.add_argument(
     '--data', choices=['wt_wine', 'rd_wine', 'parkinson'], type=str, default='rd_wine'
 )
@@ -68,7 +68,6 @@ if __name__ == '__main__':
         train_loader, valid_loader, _, train_size = dataloader(args.data, batch_size, args.test_ratio,
                                                                args.valid_ratio, args.random_state)
 
-        # Establishing TC-Flows
         if args.clip is True:
             reparam = False
         else:
@@ -90,15 +89,15 @@ if __name__ == '__main__':
         prior_picnn = distributions.MultivariateNormal(torch.zeros(args.input_x_dim).to(device),
                                                        torch.eye(args.input_x_dim).to(device))
 
-        # establish TC-Flow
+        # build FICNN map and PCP-Map
         ficnn = FICNN(args.input_y_dim, width, args.out_dim, num_layers, reparam=reparam).to(device)
         picnn = PICNN(args.input_x_dim, args.input_y_dim, width, width_y, args.out_dim, num_layers, reparam=reparam).to(device)
 
-        flow_ficnn = TriFlowFICNN(prior_ficnn, ficnn).to(device)
-        flow_picnn = TriFlowPICNN(prior_picnn, picnn).to(device)
+        map_ficnn = MapFICNN(prior_ficnn, ficnn).to(device)
+        map_picnn = PCPMap(prior_picnn, picnn).to(device)
 
-        optimizer1 = torch.optim.Adam(flow_ficnn.parameters(), lr=lr)
-        optimizer2 = torch.optim.Adam(flow_picnn.parameters(), lr=lr)
+        optimizer1 = torch.optim.Adam(map_ficnn.parameters(), lr=lr)
+        optimizer2 = torch.optim.Adam(map_picnn.parameters(), lr=lr)
 
         params_hist.loc[len(params_hist.index)] = [batch_size, lr, width, width_y, num_layers]
 
@@ -114,27 +113,27 @@ if __name__ == '__main__':
 
                 # optimizer step for flow1
                 optimizer1.zero_grad()
-                loss1 = -flow_ficnn.loglik_ficnn(y).mean()
+                loss1 = -map_ficnn.loglik_ficnn(y).mean()
                 loss1.backward()
                 optimizer1.step()
 
                 # non-negative constraint
                 if args.clip is True:
-                    for lz in flow_ficnn.ficnn.Lz:
+                    for lz in map_ficnn.ficnn.Lz:
                         with torch.no_grad():
-                            lz.weight.data = flow_ficnn.ficnn.nonneg(lz.weight)
+                            lz.weight.data = map_ficnn.ficnn.nonneg(lz.weight)
 
                 # optimizer step for flow2
                 optimizer2.zero_grad()
-                loss2 = -flow_picnn.loglik_picnn(x, y).mean()
+                loss2 = -map_picnn.loglik_picnn(x, y).mean()
                 loss2.backward()
                 optimizer2.step()
 
                 # non-negative constraint
                 if args.clip is True:
-                    for lw in flow_picnn.picnn.Lw:
+                    for lw in map_picnn.picnn.Lw:
                         with torch.no_grad():
-                            lw.weight.data = flow_picnn.picnn.nonneg(lw.weight)
+                            lw.weight.data = map_picnn.picnn.nonneg(lw.weight)
 
         valLossMeterFICNN = AverageMeter()
         valLossMeterPICNN = AverageMeter()
@@ -142,8 +141,8 @@ if __name__ == '__main__':
         for valid_sample in valid_loader:
             x_valid = valid_sample[:, args.input_y_dim:].requires_grad_(True).to(device)
             y_valid = valid_sample[:, :args.input_y_dim].requires_grad_(True).to(device)
-            mean_valid_loss_ficnn = -flow_ficnn.loglik_ficnn(y_valid).mean()
-            mean_valid_loss_picnn = -flow_picnn.loglik_picnn(x_valid, y_valid).mean()
+            mean_valid_loss_ficnn = -map_ficnn.loglik_ficnn(y_valid).mean()
+            mean_valid_loss_picnn = -map_picnn.loglik_picnn(x_valid, y_valid).mean()
             valLossMeterFICNN.update(mean_valid_loss_ficnn.item(), valid_sample.shape[0])
             valLossMeterPICNN.update(mean_valid_loss_picnn.item(), valid_sample.shape[0])
 

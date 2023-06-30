@@ -10,14 +10,14 @@ from lib.dataloader import dataloader
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
 from src.icnn import PICNN
-from src.triflow_picnn import TriFlowPICNN
+from src.pcpmap import PCPMap
 from lib.utils import makedirs, get_logger, AverageMeter
 
 """
 argument parser for hyper parameters and model handling
 """
 
-parser = argparse.ArgumentParser('PCPM')
+parser = argparse.ArgumentParser('PCP-Map')
 parser.add_argument(
     '--data', choices=['concrete', 'energy', 'yacht', 'lv'], type=str, default='concrete'
 )
@@ -114,7 +114,6 @@ if __name__ == '__main__':
         train_loader, valid_loader, _ = load_data(args.data, args.test_ratio, args.valid_ratio,
                                                   batch_size, args.random_state)
 
-        # Establishing TC-Flows
         if args.clip is True:
             reparam = False
         else:
@@ -137,10 +136,10 @@ if __name__ == '__main__':
         prior_picnn = distributions.MultivariateNormal(torch.zeros(args.input_x_dim).to(device),
                                                        torch.eye(args.input_x_dim).to(device))
 
-        # establish TC-Flow
+        # build PCP-Map
         picnn = PICNN(args.input_x_dim, args.input_y_dim, width, width_y, args.out_dim, num_layers, reparam=reparam).to(device)
-        flow_picnn = TriFlowPICNN(prior_picnn, picnn).to(device)
-        optimizer = torch.optim.Adam(flow_picnn.parameters(), lr=lr)
+        map_picnn = PCPMap(prior_picnn, picnn).to(device)
+        optimizer = torch.optim.Adam(map_picnn.parameters(), lr=lr)
 
         params_hist.loc[len(params_hist.index)] = [batch_size, lr, width, width_y, num_layers]
 
@@ -158,17 +157,17 @@ if __name__ == '__main__':
                     x = sample[:, args.input_y_dim:].requires_grad_(True).to(device)
                     y = sample[:, :args.input_y_dim].requires_grad_(True).to(device)
 
-                # optimizer step for PICNN flow
+                # optimizer step for PCP-Map
                 optimizer.zero_grad()
-                loss = -flow_picnn.loglik_picnn(x, y).mean()
+                loss = -map_picnn.loglik_picnn(x, y).mean()
                 loss.backward()
                 optimizer.step()
 
                 # non-negative constraint
                 if args.clip is True:
-                    for lw in flow_picnn.picnn.Lw:
+                    for lw in map_picnn.picnn.Lw:
                         with torch.no_grad():
-                            lw.weight.data = flow_picnn.picnn.nonneg(lw.weight)
+                            lw.weight.data = map_picnn.picnn.nonneg(lw.weight)
 
         valLossMeterPICNN = AverageMeter()
 
@@ -179,7 +178,7 @@ if __name__ == '__main__':
             else:
                 x_valid = valid_sample[:, args.input_y_dim:].requires_grad_(True).to(device)
                 y_valid = valid_sample[:, :args.input_y_dim].requires_grad_(True).to(device)
-            mean_valid_loss_picnn = -flow_picnn.loglik_picnn(x_valid, y_valid).mean()
+            mean_valid_loss_picnn = -map_picnn.loglik_picnn(x_valid, y_valid).mean()
             valLossMeterPICNN.update(mean_valid_loss_picnn.item(), valid_sample.shape[0])
 
         val_loss_picnn = valLossMeterPICNN.avg

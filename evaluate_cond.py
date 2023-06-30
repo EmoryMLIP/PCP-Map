@@ -3,10 +3,10 @@ import torch
 from torch import distributions
 from lib.dataloader import dataloader
 from src.icnn import PICNN
-from src.triflow_picnn import TriFlowPICNN
+from src.pcpmap import PCPMap
 from src.mmd import mmd
 
-parser = argparse.ArgumentParser('PCPM')
+parser = argparse.ArgumentParser('PCP-Map')
 parser.add_argument('--resume',      type=str, default="experiments/condition/concrete_2023_03_05_11_50_28_checkpt.pth")
 
 args = parser.parse_args()
@@ -42,21 +42,21 @@ if __name__ == '__main__':
 
     prior_picnn = distributions.MultivariateNormal(torch.zeros(input_x_dim).to(device), torch.eye(input_x_dim).to(device))
     picnn = PICNN(input_x_dim, input_y_dim, feature_dim, feature_y_dim, out_dim, num_layers_pi, reparam=reparam).to(device)
-    flow_picnn = TriFlowPICNN(prior_picnn, picnn)
+    map_picnn = PCPMap(prior_picnn, picnn)
 
-    flow_picnn.load_state_dict(checkpt["state_dict_picnn"])
-    flow_picnn = flow_picnn.to(device)
+    map_picnn.load_state_dict(checkpt["state_dict_picnn"])
+    map_picnn = map_picnn.to(device)
 
     # Obtain test metrics numbers
     x_test = test_data[:, input_y_dim:].requires_grad_(True).to(device)
     y_test = test_data[:, :input_y_dim].requires_grad_(True).to(device)
-    log_prob_picnn = flow_picnn.loglik_picnn(x_test, y_test)
+    log_prob_picnn = map_picnn.loglik_picnn(x_test, y_test)
     pb_mean_NLL = -log_prob_picnn.mean()
     print('Mean Conditional Negative Log Likelihood: {:.3e}'.format(pb_mean_NLL.item()))
 
     # Calculate MMD
     zx = torch.randn(test_data.shape[0], input_x_dim).to(device)
-    x_generated, _ = flow_picnn.g2(zx, test_data[:, :input_y_dim].to(device), tol=checkpt['args'].tol)
+    x_generated, _ = map_picnn.gx(zx, test_data[:, :input_y_dim].to(device), tol=checkpt['args'].tol)
     x_generated = x_generated.detach().to(device)
     mean_max_dis = mmd(x_generated, test_data[:, input_y_dim:])
     print('Maximum Mean Discrepancy: {:.3e}'.format(mean_max_dis))

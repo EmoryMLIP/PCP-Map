@@ -5,23 +5,20 @@ import torch.func as func
 from lib.utils import AverageMeter
 
 
-class TriFlowFICNN(nn.Module):
+class MapFICNN(nn.Module):
 
     """
-    The first component of the monotone block triangular transport map g
-    parameterized by Fully Input Convex Neural Networks (Amos et al., 2017)
-    Inverse Map g1inv: maps the target marginal distribution (over the conditional input) to
-    the reference marginal distribution
-    Direct Map g1: generates samples from the target marginal distribution using samples
-    from the reference marginal distribution
+    Transport map parameterized by Fully Input Convex Neural Networks (Amos et al., 2017)
+    Inverse Map gyinv: pushes the target marginal distribution to the reference distribution
+    Direct Map gy: pushes the reference distribution to the target marginal distribution
     """
 
     def __init__(self, prior, ficnn):
         """
-        :param prior: reference marginal distribution
+        :param prior: reference (Gaussian) distribution
         :param ficnn: FICNN network
         """
-        super(TriFlowFICNN, self).__init__()
+        super(MapFICNN, self).__init__()
         self.prior = prior
         self.ficnn = ficnn
         # trainable non-negative weight for quadratic term
@@ -41,7 +38,7 @@ class TriFlowFICNN(nn.Module):
     def compute_sum(self, y):
         return self.get_ficnn(y).sum()
 
-    def g1inv(self, y):
+    def gyinv(self, y):
         """
         :param y: samples from the target marginal distribution
         :return: output of inverse map
@@ -50,7 +47,7 @@ class TriFlowFICNN(nn.Module):
         zy = torch.autograd.grad(out.sum(), y, create_graph=True)[0]
         return zy
 
-    def g1inv_grad(self, y):
+    def gyinv_grad(self, y):
         """
         :param y: samples from the target marginal distribution
         :return: gradient of the inverse map
@@ -63,8 +60,8 @@ class TriFlowFICNN(nn.Module):
         :param y: samples from the target marginal distribution
         :return: log-likelihood
         """
-        zy = self.g1inv(y)
-        hessian = self.g1inv_grad(y)
+        zy = self.gyinv(y)
+        hessian = self.gyinv_grad(y)
         logprob = self.prior.log_prob(zy)
         if y.shape[1] > 1:
             # computing the log det of Hessian using eigenvalue decomposition
@@ -74,11 +71,11 @@ class TriFlowFICNN(nn.Module):
             logdet = torch.log(hessian)
         return logprob + logdet
 
-    def g1(self, zy, tol, max_iter=1000000):
+    def gy(self, zy, tol, max_iter=1000000):
         """
         Generate samples from the target marginal distribution by solving a cvx optim problem
         using L-BFGS algorithm. Method borrowed from the CP-Flow paper (Huang et al., 2021)
-        :param zy: samples from the reference marginal distribution
+        :param zy: samples from the reference (Gaussian) distribution
         :param tol: L-BFGS tolerance
         :param max_iter: maximal number of iterations per optimization step
         :return: generated samples from the target marginal distribution
@@ -113,12 +110,12 @@ if __name__ == "__main__":
     y2 = torch.randn(100, 3).requires_grad_(True)
     ficnn1 = FICNN(1, 128, 1, 6)
     ficnn2 = FICNN(3, 128, 1, 6)
-    flow1 = TriFlowFICNN(prior=None, ficnn=ficnn1)
-    flow2 = TriFlowFICNN(prior=None, ficnn=ficnn2)
-    zy_1 = flow1.g1inv(y1)
-    zy_2 = flow2.g1inv(y2)
-    y1_gen, num_evals1 = flow1.g1(zy_1, tol=1e-12)
-    y2_gen, num_evals2 = flow2.g1(zy_2, tol=1e-12)
+    map1 = MapFICNN(prior=None, ficnn=ficnn1)
+    map2 = MapFICNN(prior=None, ficnn=ficnn2)
+    zy_1 = map1.gyinv(y1)
+    zy_2 = map2.gyinv(y2)
+    y1_gen, num_evals1 = map1.gy(zy_1, tol=1e-12)
+    y2_gen, num_evals2 = map2.gy(zy_2, tol=1e-12)
     err1 = torch.norm(y1 - y1_gen) / torch.norm(y1)
     err2 = torch.norm(y2 - y2_gen) / torch.norm(y2)
     print("Number of closure evaluations for y1: " + str(num_evals1))
@@ -127,8 +124,8 @@ if __name__ == "__main__":
     print("Block Inversion Relative Error: " + str(err2.item()))
 
     # grad check
-    fv = flow2.compute_sum(y2)
-    zyy_2 = flow2.g1inv_grad(y2)
+    fv = map2.compute_sum(y2)
+    zyy_2 = map2.gyinv_grad(y2)
     dy2 = torch.rand_like(y2)
     dzy2dy2 = torch.sum(zy_2 * dy2)
     dzyy2dy2 = torch.matmul(torch.matmul(dy2.unsqueeze(-1).transpose(2, 1), zyy_2), dy2.unsqueeze(-1)).sum()
@@ -136,7 +133,7 @@ if __name__ == "__main__":
     print("h\t E0 \t E1 \t E2".expandtabs(20))
     for i in range(11):
         h.append(h[i] / 2)
-        fvt = flow2.compute_sum(y2 + h[i + 1] * dy2)
+        fvt = map2.compute_sum(y2 + h[i + 1] * dy2)
         fdiff = fvt - fv
         fdiff1 = fdiff - h[i + 1] * dzy2dy2
         fdiff2 = fdiff1 - 0.5 * (h[i + 1] ** 2) * dzyy2dy2

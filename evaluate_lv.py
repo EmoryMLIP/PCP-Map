@@ -8,11 +8,11 @@ from sklearn.model_selection import train_test_split
 from torch import distributions
 from src.icnn import PICNN
 from src.plotter import plot_matrix
-from src.triflow_picnn import TriFlowPICNN
+from src.pcpmap import PCPMap
 from datasets.StochasticLotkaVolterra import StochasticLotkaVolterra
 import matplotlib.pyplot as plt
 
-parser = argparse.ArgumentParser('PCPM')
+parser = argparse.ArgumentParser('PCP-Map')
 parser.add_argument('--resume',    type=str, default="/experiments/tabcond/lv/lv_2023_04_12_14_52_05_64_0.005_5_512_checkpt.pth")
 
 args = parser.parse_args()
@@ -28,7 +28,7 @@ def experiment(LV, abc_dat_path, theta_star, flow):
 
     # generate samples
     zx = torch.randn(2000, 4).to(device)
-    x_gen, num_evals = flow.g2(zx, y_theta_star_norm_tensor.to(device), checkpt['args'].tol)
+    x_gen, num_evals = flow.gx(zx, y_theta_star_norm_tensor.to(device), checkpt['args'].tol)
     x_gen = x_gen.detach().to(device)
     print("Number of closure calls: " + str(num_evals))
     theta_gen = x_gen.detach().cpu().numpy()
@@ -124,16 +124,14 @@ if __name__ == '__main__':
 
     prior_picnn = distributions.MultivariateNormal(torch.zeros(input_x_dim).to(device), torch.eye(input_x_dim).to(device))
     picnn = PICNN(input_x_dim, input_y_dim, feature_dim, feature_y_dim, out_dim, num_layers_pi, reparam=reparam).to(device)
-    flow_picnn = TriFlowPICNN(prior_picnn, picnn)
-    flow_picnn.load_state_dict(checkpt["state_dict_picnn"])
-    flow_picnn = flow_picnn.to(device)
+    map_picnn = PCPMap(prior_picnn, picnn)
+    map_picnn.load_state_dict(checkpt["state_dict_picnn"])
+    map_picnn = map_picnn.to(device)
 
     """
     Test Generated Sample
     """
 
-    # dataset_load = scipy.io.loadmat('.../PCPM/datasets/training_data500k.mat')    # load 500k training samples
-    # dat = dataset_load["train_data"]
     dataset_load = scipy.io.loadmat('.../PCPM/datasets/training_data.mat')
     x_train = dataset_load['x_train']
     y_train = dataset_load['y_train']
@@ -151,8 +149,8 @@ if __name__ == '__main__':
     StochLV = StochasticLotkaVolterra()
     path_theta1 = '.../PCPM/experiments/tabcond/lv/StochasticLV_ABCsamples2k.pk'
     theta1 = np.array([0.01, 0.5, 1, 0.01])
-    experiment(StochLV, path_theta1, theta1, flow_picnn)
+    experiment(StochLV, path_theta1, theta1, map_picnn)
 
     path_theta2 = '.../PCPM/experiments/tabcond/lv/StochasticLV_ABCsamplesNewTheta.pk'
     theta2 = np.array([0.02, 0.02, 0.02, 0.02])
-    experiment(StochLV, path_theta2, theta2, flow_picnn)
+    experiment(StochLV, path_theta2, theta2, map_picnn)

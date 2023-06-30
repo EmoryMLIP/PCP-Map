@@ -5,23 +5,20 @@ import torch.func as func
 from lib.utils import AverageMeter
 
 
-class TriFlowPICNN(nn.Module):
+class PCPMap(nn.Module):
 
     """
-    The second component of the monotone block triangular transport map g
-    parameterized by Partially Input Convex Neural Networks (Amos et al., 2017)
-    Inverse Map g2inv: maps the target conditional distribution to the reference marginal distribution
-    Direct Map g2: generates samples from the target conditional distribution using samples
-    from the reference marginal distribution and samples (conditional inputs/data) from the target marginal
-    distribution
+    The Partially Convex Potential Map parameterized by Partially Input Convex Neural Networks (Amos et al., 2017)
+    Inverse Map gxinv: pushes the target conditional distribution to the reference distribution
+    Direct Map gx: pushes reference distribution to the target conditional distribution
     """
 
     def __init__(self, prior, picnn):
         """
-        :param prior: reference marginal distribution
+        :param prior: reference (Gaussian) distribution
         :param picnn: PICNN network
         """
-        super(TriFlowPICNN, self).__init__()
+        super(PCPMap, self).__init__()
         self.prior = prior
         self.picnn = picnn
         # trainable non-negative for quadratic term
@@ -42,7 +39,7 @@ class TriFlowPICNN(nn.Module):
     def compute_sum(self, x, y):
         return self.get_picnn(x, y).sum()
 
-    def g2inv(self, x, y):
+    def gxinv(self, x, y):
         """
         :param x: parameter/state component of the samples from the target joint distribution
         :param y: observation/data component of the samples from the target joint distribution
@@ -52,7 +49,7 @@ class TriFlowPICNN(nn.Module):
         zx = torch.autograd.grad(out.sum(), x, create_graph=True)[0]
         return zx
 
-    def g2inv_grad(self, x, y):
+    def gxinv_grad(self, x, y):
         """
         :param x: parameter/state component of the samples from the target joint distribution
         :param y: observation/data component of the samples from the target joint distribution
@@ -67,8 +64,8 @@ class TriFlowPICNN(nn.Module):
         :param y: observation/data component of the samples from the target joint distribution
         :return: log-likelihood
         """
-        zx = self.g2inv(x, y)
-        hessian = self.g2inv_grad(x, y)
+        zx = self.gxinv(x, y)
+        hessian = self.gxinv_grad(x, y)
         logprob = self.prior.log_prob(zx)
         if x.shape[1] > 1:
             # computing the log det of Hessian using eigenvalue decomposition
@@ -78,11 +75,11 @@ class TriFlowPICNN(nn.Module):
             logdet = torch.log(hessian)
         return logprob + logdet
 
-    def g2(self, zx, y, tol, max_iter=1000000):
+    def gx(self, zx, y, tol, max_iter=1000000):
         """
         Generate samples from the target conditional distribution by solving a cvx optim problem
-        using L-BFGS algorithm. Method borrowed from the CP-Flow paper (Huang et al., 2021)
-        :param zx: samples from the reference marginal distribution
+        using L-BFGS algorithm. Method inspired by the CP-Flow paper (Huang et al., 2021)
+        :param zx: samples from the reference (Gaussian) distribution
         :param y: conditional inputs
         :param tol: LBFGS tolerance
         :param max_iter: maximal number of iterations per optimization step
@@ -116,16 +113,16 @@ if __name__ == "__main__":
     from src.icnn import PICNN
     picnn1 = PICNN(1, 1, 128, 128, 1, 6)
     picnn2 = PICNN(3, 2, 128, 64, 1, 6)
-    flow1 = TriFlowPICNN(prior=None, picnn=picnn1)
-    flow2 = TriFlowPICNN(prior=None, picnn=picnn2)
+    map1 = PCPMap(prior=None, picnn=picnn1)
+    map2 = PCPMap(prior=None, picnn=picnn2)
     x1 = torch.randn(100, 1).view(-1, 1).requires_grad_(True)
     y1 = torch.randn(100, 1).view(-1, 1).requires_grad_(True)
     x2 = torch.randn(100, 3).requires_grad_(True)
     y2 = torch.randn(100, 2).requires_grad_(True)
-    zx_1 = flow1.g2inv(x1, y1)
-    zx_2 = flow2.g2inv(x2, y2)
-    x1_gen, num_evals1 = flow1.g2(zx_1, y1, tol=1e-12)
-    x2_gen, num_evals2 = flow2.g2(zx_2, y2, tol=1e-12)
+    zx_1 = map1.gxinv(x1, y1)
+    zx_2 = map2.gxinv(x2, y2)
+    x1_gen, num_evals1 = map1.gx(zx_1, y1, tol=1e-12)
+    x2_gen, num_evals2 = map2.gx(zx_2, y2, tol=1e-12)
     err1 = torch.norm(x1 - x1_gen) / torch.norm(x1)
     err2 = torch.norm(x2 - x2_gen) / torch.norm(x2)
     print("Number of closure evaluations for x1: " + str(num_evals1))
@@ -134,8 +131,8 @@ if __name__ == "__main__":
     print("Block Inversion Relative Error: " + str(err2.item()))
 
     # grad check
-    fv = flow2.compute_sum(x2, y2)
-    zxx_2 = flow2.g2inv_grad(x2, y2)
+    fv = map2.compute_sum(x2, y2)
+    zxx_2 = map2.gxinv_grad(x2, y2)
     dx2 = torch.rand_like(x2)
     dzx2dx2 = torch.sum(zx_2*dx2)
     dzxx2dx2 = torch.matmul(torch.matmul(dx2.unsqueeze(-1).transpose(2, 1), zxx_2), dx2.unsqueeze(-1)).sum()
@@ -143,7 +140,7 @@ if __name__ == "__main__":
     print("h\t E0 \t E1 \t E2".expandtabs(20))
     for i in range(11):
         h.append(h[i]/2)
-        fvt = flow2.compute_sum(x2+h[i+1]*dx2, y2)
+        fvt = map2.compute_sum(x2 + h[i + 1] * dx2, y2)
         fdiff = fvt-fv
         fdiff1 = fdiff - h[i+1]*dzx2dx2
         fdiff2 = fdiff1 - 0.5*(h[i+1]**2)*dzxx2dx2
