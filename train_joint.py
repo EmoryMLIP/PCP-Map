@@ -195,8 +195,8 @@ if __name__ == '__main__':
     logger.info("saveLocation = {:}".format(args.save))
     logger.info("--------------------------------------------------\n")
 
-    columns_train = ["epoch", "step", "train_loss_f", "train_loss_p"]
-    columns_valid = ["valid_loss_f", "valid_loss_p"]
+    columns_train = ["epoch", "step", "time/trnstep", "train_loss_f", "train_loss_p"]
+    columns_valid = ["time/vldstep", "valid_loss_f", "valid_loss_p"]
     train_hist = pd.DataFrame(columns=columns_train)
     valid_hist = pd.DataFrame(columns=columns_valid)
 
@@ -218,6 +218,7 @@ if __name__ == '__main__':
             x = sample[:, args.input_y_dim:].requires_grad_(True).to(device)
             y = sample[:, :args.input_y_dim].requires_grad_(True).to(device)
 
+            # start timer
             end = time.time()
 
             # optimizer step for FICNN map
@@ -244,15 +245,16 @@ if __name__ == '__main__':
                     with torch.no_grad():
                         lw.weight.data = map_picnn.picnn.nonneg(lw.weight)
 
-            timeMeter.update(time.time() - end)
-
-            train_hist.loc[len(train_hist.index)] = [epoch + 1, i + 1, loss1.item(), loss2.item()]
+            # end timer
+            step_time = time.time() - end
+            timeMeter.update(step_time)
+            train_hist.loc[len(train_hist.index)] = [epoch + 1, i + 1, step_time, loss1.item(), loss2.item()]
 
             # printing
             if itr % args.print_freq == 0:
                 log_message = (
-                    '{:05d}  {:7.1f}     {:04d}    {:9.3e}       {:9.3e} '.format(
-                        itr, epoch + 1, i + 1, loss1.item(), loss2.item()
+                    '{:05d}  {:7.1f}     {:04d}    {:9.3e}      {:9.3e}       {:9.3e} '.format(
+                        itr, epoch + 1, i + 1, step_time, loss1.item(), loss2.item()
                     )
                 )
                 logger.info(log_message)
@@ -261,18 +263,23 @@ if __name__ == '__main__':
 
                 valLossMeterFICNN = AverageMeter()
                 valLossMeterPICNN = AverageMeter()
-
+                vldtimeMeter = AverageMeter()
                 for valid_sample in valid_loader:
                     x_valid = valid_sample[:, args.input_y_dim:].requires_grad_(True).to(device)
                     y_valid = valid_sample[:, :args.input_y_dim].requires_grad_(True).to(device)
+                    # start timer
+                    end_vld = time.time()
                     mean_valid_loss_ficnn = -map_ficnn.loglik_ficnn(y_valid).mean()
                     mean_valid_loss_picnn = -map_picnn.loglik_picnn(x_valid, y_valid).mean()
+                    # end timer
+                    vldstep_time = time.time() - end_vld
+                    vldtimeMeter.update(vldstep_time)
                     valLossMeterFICNN.update(mean_valid_loss_ficnn.item(), valid_sample.shape[0])
                     valLossMeterPICNN.update(mean_valid_loss_picnn.item(), valid_sample.shape[0])
 
-                valid_hist.loc[len(valid_hist.index)] = [valLossMeterFICNN.avg, valLossMeterPICNN.avg]
-                log_message_valid = '   {:9.3e}       {:9.3e} '.format(
-                    valLossMeterFICNN.avg, valLossMeterPICNN.avg
+                valid_hist.loc[len(valid_hist.index)] = [vldtimeMeter.sum, valLossMeterFICNN.avg, valLossMeterPICNN.avg]
+                log_message_valid = '   {:9.3e}     {:9.3e}       {:9.3e} '.format(
+                    vldtimeMeter.sum, valLossMeterFICNN.avg, valLossMeterPICNN.avg
                 )
 
                 if valLossMeterFICNN.avg < best_loss_ficnn:

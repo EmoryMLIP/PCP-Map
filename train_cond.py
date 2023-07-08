@@ -152,7 +152,6 @@ if __name__ == '__main__':
     train_loader, valid_loader, n_train = load_data(args.data, args.test_ratio, args.valid_ratio,
                                                     args.batch_size, args.random_state)
 
-    # Establishing TC-Flow
     if args.clip is True:
         reparam = False
     else:
@@ -162,12 +161,12 @@ if __name__ == '__main__':
     prior_picnn = distributions.MultivariateNormal(torch.zeros(args.input_x_dim).to(device),
                                                    torch.eye(args.input_x_dim).to(device))
 
-    # Establishing TC-Flow
+    # build PCP-Map
     picnn = PICNN(args.input_x_dim, args.input_y_dim, args.feature_dim, args.feature_y_dim,
                   args.out_dim, args.num_layers_pi, reparam=reparam).to(device)
-    map_picnn = PCPMap(prior_picnn, picnn).to(device)
+    pcpmap = PCPMap(prior_picnn, picnn).to(device)
 
-    optimizer = torch.optim.Adam(map_picnn.parameters(), lr=args.lr)
+    optimizer = torch.optim.Adam(pcpmap.parameters(), lr=args.lr)
 
     strTitle = args.data + '_' + sStartTime + '_' + str(args.batch_size) + '_' + str(args.lr) + \
             '_' + str(args.num_layers_pi) + '_' + str(args.feature_dim)
@@ -181,8 +180,8 @@ if __name__ == '__main__':
     logger.info("saveLocation = {:}".format(args.save))
     logger.info("--------------------------------------------------\n")
 
-    columns_train = ["epoch", "step", "train_loss_p"]
-    columns_valid = ["valid_loss_p"]
+    columns_train = ["epoch", "step", "time/trnstep", "train_loss_p"]
+    columns_valid = ["time/vldstep", "valid_loss_p"]
     train_hist = pd.DataFrame(columns=columns_train)
     valid_hist = pd.DataFrame(columns=columns_valid)
 
@@ -206,28 +205,30 @@ if __name__ == '__main__':
                 x = sample[:, args.input_y_dim:].requires_grad_(True).to(device)
                 y = sample[:, :args.input_y_dim].requires_grad_(True).to(device)
 
+            # start timer
             end = time.time()
 
-            # optimizer step for picnn flow
             optimizer.zero_grad()
-            loss = -map_picnn.loglik_picnn(x, y).mean()
+            loss = -pcpmap.loglik_picnn(x, y).mean()
             loss.backward()
             optimizer.step()
 
             # non-negative constraint
             if args.clip is True:
-                for lw in map_picnn.picnn.Lw:
+                for lw in pcpmap.picnn.Lw:
                     with torch.no_grad():
-                        lw.weight.data = map_picnn.picnn.nonneg(lw.weight)
+                        lw.weight.data = pcpmap.picnn.nonneg(lw.weight)
 
-            timeMeter.update(time.time() - end)
-            train_hist.loc[len(train_hist.index)] = [epoch + 1, i + 1, loss.item()]
+            # end timer
+            step_time = time.time() - end
+            timeMeter.update(step_time)
+            train_hist.loc[len(train_hist.index)] = [epoch + 1, i + 1, step_time, loss.item()]
 
             # printing
             if itr % args.print_freq == 0:
                 log_message = (
-                    '{:05d}  {:7.1f}     {:04d}    {:9.3e} '.format(
-                        itr, epoch + 1, i + 1, loss.item()
+                    '{:05d}  {:7.1f}     {:04d}    {:9.3e}    {:9.3e} '.format(
+                        itr, epoch + 1, i + 1, step_time, loss.item()
                     )
                 )
                 logger.info(log_message)
@@ -235,7 +236,7 @@ if __name__ == '__main__':
             if itr % args.valid_freq == 0 or itr % total_itr == 0:
 
                 valLossMeterPICNN = AverageMeter()
-
+                vldtimeMeter = AverageMeter()
                 for valid_sample in valid_loader:
                     if args.data == 'lv':
                         x_valid = valid_sample[:, :args.input_x_dim].requires_grad_(True).to(device)
@@ -243,17 +244,22 @@ if __name__ == '__main__':
                     else:
                         x_valid = valid_sample[:, args.input_y_dim:].requires_grad_(True).to(device)
                         y_valid = valid_sample[:, :args.input_y_dim].requires_grad_(True).to(device)
-                    mean_valid_loss_picnn = -map_picnn.loglik_picnn(x_valid, y_valid).mean()
+                    # start timer
+                    end_vld = time.time()
+                    mean_valid_loss_picnn = -pcpmap.loglik_picnn(x_valid, y_valid).mean()
+                    # end timer
+                    vldstep_time = time.time() - end_vld
+                    vldtimeMeter.update(vldstep_time)
                     valLossMeterPICNN.update(mean_valid_loss_picnn.item(), valid_sample.shape[0])
 
-                valid_hist.loc[len(valid_hist.index)] = [valLossMeterPICNN.avg]
-                log_message_valid = '   {:9.3e} '.format(valLossMeterPICNN.avg)
+                valid_hist.loc[len(valid_hist.index)] = [vldtimeMeter.sum, valLossMeterPICNN.avg]
+                log_message_valid = '   {:9.3e}    {:9.3e} '.format(vldtimeMeter.sum, valLossMeterPICNN.avg)
 
                 if valLossMeterPICNN.avg < best_loss_picnn:
                     n_vals_wo_improve_picnn = 0
                     best_loss_picnn = valLossMeterPICNN.avg
                     makedirs(args.save)
-                    bestParams_picnn = map_picnn.state_dict()
+                    bestParams_picnn = pcpmap.state_dict()
                     torch.save({
                         'args': args,
                         'state_dict_picnn': bestParams_picnn,
@@ -275,7 +281,7 @@ if __name__ == '__main__':
                     valid_hist.to_csv(os.path.join(args.save, '%s_valid_hist.csv' % strTitle))
                     if args.save_test is False:
                         exit(0)
-                    NLL, MMD = evaluate_model(map_picnn, args.data, args.batch_size, args.test_ratio, args.valid_ratio,
+                    NLL, MMD = evaluate_model(pcpmap, args.data, args.batch_size, args.test_ratio, args.valid_ratio,
                                               args.random_state, args.input_y_dim, args.input_x_dim, args.tol, bestParams_picnn)
                     columns_test = ["batch_size", "lr", "width", "width_y", "depth", "NLL", "MMD", "time", "iter"]
                     test_hist = pd.DataFrame(columns=columns_test)
@@ -298,7 +304,7 @@ if __name__ == '__main__':
     valid_hist.to_csv(os.path.join(args.save, '%s_valid_hist.csv' % strTitle))
     if args.save_test is False:
         exit(0)
-    NLL, MMD = evaluate_model(map_picnn, args.data, args.batch_size, args.test_ratio, args.valid_ratio,
+    NLL, MMD = evaluate_model(pcpmap, args.data, args.batch_size, args.test_ratio, args.valid_ratio,
                               args.random_state, args.input_y_dim, args.input_x_dim, args.tol, bestParams_picnn)
 
     columns_test = ["batch_size", "lr", "width", "width_y", "depth", "NLL", "MMD", "time", "iter"]

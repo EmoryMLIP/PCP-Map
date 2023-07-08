@@ -138,8 +138,8 @@ if __name__ == '__main__':
 
         # build PCP-Map
         picnn = PICNN(args.input_x_dim, args.input_y_dim, width, width_y, args.out_dim, num_layers, reparam=reparam).to(device)
-        map_picnn = PCPMap(prior_picnn, picnn).to(device)
-        optimizer = torch.optim.Adam(map_picnn.parameters(), lr=lr)
+        pcpmap = PCPMap(prior_picnn, picnn).to(device)
+        optimizer = torch.optim.Adam(pcpmap.parameters(), lr=lr)
 
         params_hist.loc[len(params_hist.index)] = [batch_size, lr, width, width_y, num_layers]
 
@@ -159,15 +159,15 @@ if __name__ == '__main__':
 
                 # optimizer step for PCP-Map
                 optimizer.zero_grad()
-                loss = -map_picnn.loglik_picnn(x, y).mean()
+                loss = -pcpmap.loglik_picnn(x, y).mean()
                 loss.backward()
                 optimizer.step()
 
                 # non-negative constraint
                 if args.clip is True:
-                    for lw in map_picnn.picnn.Lw:
+                    for lw in pcpmap.picnn.Lw:
                         with torch.no_grad():
-                            lw.weight.data = map_picnn.picnn.nonneg(lw.weight)
+                            lw.weight.data = pcpmap.picnn.nonneg(lw.weight)
 
         valLossMeterPICNN = AverageMeter()
 
@@ -178,7 +178,7 @@ if __name__ == '__main__':
             else:
                 x_valid = valid_sample[:, args.input_y_dim:].requires_grad_(True).to(device)
                 y_valid = valid_sample[:, :args.input_y_dim].requires_grad_(True).to(device)
-            mean_valid_loss_picnn = -map_picnn.loglik_picnn(x_valid, y_valid).mean()
+            mean_valid_loss_picnn = -pcpmap.loglik_picnn(x_valid, y_valid).mean()
             valLossMeterPICNN.update(mean_valid_loss_picnn.item(), valid_sample.shape[0])
 
         val_loss_picnn = valLossMeterPICNN.avg
