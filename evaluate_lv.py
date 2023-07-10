@@ -18,12 +18,12 @@ parser.add_argument('--resume',    type=str, default="/experiments/tabcond/lv/lv
 args = parser.parse_args()
 
 
-def experiment(LV, abc_dat_path, theta_star, model):
+def experiment(LV, abc_dat_path, theta_star, model, trn_mean, trn_std):
 
     # grab y star from ABC
     abc_sample = pd.read_pickle(abc_dat_path)
     y_theta_star = abc_sample["y_true"]
-    y_theta_star_norm = (y_theta_star - train_mean[:, input_x_dim:]) / train_std[:, input_x_dim:]
+    y_theta_star_norm = (y_theta_star - trn_mean[:, input_x_dim:]) / trn_std[:, input_x_dim:]
     y_theta_star_norm_tensor = torch.tensor(y_theta_star_norm, dtype=torch.float32)
 
     # generate samples
@@ -32,7 +32,7 @@ def experiment(LV, abc_dat_path, theta_star, model):
     x_gen = x_gen.detach().to(device)
     print("Number of closure calls: " + str(num_evals))
     theta_gen = x_gen.detach().cpu().numpy()
-    theta_gen = (theta_gen * train_std[:, :input_x_dim] + train_mean[:, :input_x_dim]).squeeze()
+    theta_gen = (theta_gen * trn_std[:, :input_x_dim] + trn_mean[:, :input_x_dim]).squeeze()
 
     # plot
     theta_star_log = np.log(theta_star)
@@ -132,7 +132,7 @@ if __name__ == '__main__':
     Test Generated Sample
     """
 
-    dataset_load = scipy.io.loadmat('.../PCPM/datasets/training_data.mat')
+    dataset_load = scipy.io.loadmat('.../PCP-Map/datasets/training_data.mat')
     x_train = dataset_load['x_train']
     y_train = dataset_load['y_train']
     dat = np.concatenate((x_train, y_train), axis=1)
@@ -147,10 +147,10 @@ if __name__ == '__main__':
     train_std = np.std(train, axis=0, keepdims=True)
 
     StochLV = StochasticLotkaVolterra()
-    path_theta1 = '.../PCPM/experiments/tabcond/lv/StochasticLV_ABCsamples2k.pk'
+    path_theta1 = '.../PCP-Map/experiments/tabcond/lv/StochasticLV_ABCsamples2k.pk'
     theta1 = np.array([0.01, 0.5, 1, 0.01])
-    experiment(StochLV, path_theta1, theta1, pcpmap)
+    experiment(StochLV, path_theta1, theta1, pcpmap, train_mean, train_std)
 
-    path_theta2 = '.../PCPM/experiments/tabcond/lv/StochasticLV_ABCsamplesNewTheta.pk'
+    path_theta2 = '.../PCP-Map/experiments/tabcond/lv/StochasticLV_ABCsamplesNewTheta.pk'
     theta2 = np.array([0.02, 0.02, 0.02, 0.02])
-    experiment(StochLV, path_theta2, theta2, pcpmap)
+    experiment(StochLV, path_theta2, theta2, pcpmap, train_mean, train_std)

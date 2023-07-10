@@ -2,12 +2,12 @@ import os
 import numpy as np
 import pandas as pd
 
-loss_pk = pd.read_csv('.../PCPM/experiments/tabjoint/parkinson_valid_hist.csv').to_numpy()
-loss_rd = pd.read_csv('.../PCPM/experiments/tabjoint/rd_wine_valid_hist.csv').to_numpy()
-loss_wt = pd.read_csv('.../PCPM/experiments/tabjoint/wt_wine_valid_hist.csv').to_numpy()
-param_pk = pd.read_csv('.../PCPM/experiments/tabjoint/parkinson_params_hist.csv').to_numpy()
-param_rd = pd.read_csv('.../PCPM/experiments/tabjoint/rd_wine_params_hist.csv').to_numpy()
-param_wt = pd.read_csv('.../PCPM/experiments/tabjoint/wt_wine_params_hist.csv').to_numpy()
+loss_pk = pd.read_csv('.../PCP-Map/experiments/tabjoint/parkinson_valid_hist.csv').to_numpy()
+loss_rd = pd.read_csv('.../PCP-Map/experiments/tabjoint/rd_wine_valid_hist.csv').to_numpy()
+loss_wt = pd.read_csv('.../PCP-Map/experiments/tabjoint/wt_wine_valid_hist.csv').to_numpy()
+param_pk = pd.read_csv('.../PCP-Map/experiments/tabjoint/parkinson_params_hist.csv').to_numpy()
+param_rd = pd.read_csv('.../PCP-Map/experiments/tabjoint/rd_wine_params_hist.csv').to_numpy()
+param_wt = pd.read_csv('.../PCP-Map/experiments/tabjoint/wt_wine_params_hist.csv').to_numpy()
 loss_param_pk = np.concatenate((param_pk[:, 1:], loss_pk[:, 1:]), axis=1)
 loss_param_rd = np.concatenate((param_rd[:, 1:], loss_rd[:, 1:]), axis=1)
 loss_param_wt = np.concatenate((param_wt[:, 1:], loss_wt[:, 1:]), axis=1)

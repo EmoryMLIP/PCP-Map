@@ -332,7 +332,7 @@ if __name__ == '__main__':
                     test_hist = pd.DataFrame(columns=columns_test)
                     test_hist.loc[len(test_hist.index)] = [args.batch_size, args.lr, args.feature_dim, args.feature_y_dim,
                                                            args.num_layers_pi, NLL, MMD, timeMeter.sum, itr]
-                    testfile_name = '.../PCPM/experiments/tabjoint/' + args.data + '_test_hist.csv'
+                    testfile_name = '.../PCP-Map/experiments/tabjoint/' + args.data + '_test_hist.csv'
                     if os.path.isfile(testfile_name):
                         test_hist.to_csv(testfile_name, mode='a', index=False, header=False)
                     else:
@@ -357,7 +357,7 @@ if __name__ == '__main__':
                     test_hist = pd.DataFrame(columns=columns_test)
                     test_hist.loc[len(test_hist.index)] = [args.batch_size, args.lr, args.feature_dim, args.feature_y_dim,
                                                            args.num_layers_pi, NLL, MMD, timeMeter.sum, itr]
-                    testfile_name = '.../PCPM/experiments/tabjoint/' + args.data + '_test_hist.csv'
+                    testfile_name = '.../PCP-Map/experiments/tabjoint/' + args.data + '_test_hist.csv'
                     if os.path.isfile(testfile_name):
                         test_hist.to_csv(testfile_name, mode='a', index=False, header=False)
                     else:
@@ -381,7 +381,7 @@ if __name__ == '__main__':
     test_hist = pd.DataFrame(columns=columns_test)
     test_hist.loc[len(test_hist.index)] = [args.batch_size, args.lr, args.feature_dim, args.feature_y_dim,
                                            args.num_layers_pi, NLL, MMD, timeMeter.sum, itr]
-    testfile_name = '.../PCPM/experiments/tabjoint/' + args.data + '_test_hist.csv'
+    testfile_name = '.../PCP-Map/experiments/tabjoint/' + args.data + '_test_hist.csv'
     if os.path.isfile(testfile_name):
         test_hist.to_csv(testfile_name, mode='a', index=False, header=False)
     else:

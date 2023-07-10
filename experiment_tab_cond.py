@@ -2,12 +2,12 @@ import os
 import numpy as np
 import pandas as pd
 
-loss_con = pd.read_csv('.../PCPM/experiments/tabcond/concrete_valid_hist.csv').to_numpy()
-loss_enr = pd.read_csv('.../PCPM/experiments/tabcond/energy_valid_hist.csv').to_numpy()
-loss_yat = pd.read_csv('.../PCPM/experiments/tabcond/yacht_valid_hist.csv').to_numpy()
-param_con = pd.read_csv('.../PCPM/experiments/tabcond/concrete_params_hist.csv').to_numpy()
-param_enr = pd.read_csv('.../PCPM/experiments/tabcond/energy_params_hist.csv').to_numpy()
-param_yat = pd.read_csv('.../PCPM/experiments/tabcond/yacht_params_hist.csv').to_numpy()
+loss_con = pd.read_csv('.../PCP-Map/experiments/tabcond/concrete_valid_hist.csv').to_numpy()
+loss_enr = pd.read_csv('.../PCP-Map/experiments/tabcond/energy_valid_hist.csv').to_numpy()
+loss_yat = pd.read_csv('.../PCP-Map/experiments/tabcond/yacht_valid_hist.csv').to_numpy()
+param_con = pd.read_csv('.../PCP-Map/experiments/tabcond/concrete_params_hist.csv').to_numpy()
+param_enr = pd.read_csv('.../PCP-Map/experiments/tabcond/energy_params_hist.csv').to_numpy()
+param_yat = pd.read_csv('.../PCP-Map/experiments/tabcond/yacht_params_hist.csv').to_numpy()
 loss_param_con = np.concatenate((param_con[:, 1:], loss_con[:, 1:]), axis=1)
 loss_param_enr = np.concatenate((param_enr[:, 1:], loss_enr[:, 1:]), axis=1)
 loss_param_yat = np.concatenate((param_yat[:, 1:], loss_yat[:, 1:]), axis=1)

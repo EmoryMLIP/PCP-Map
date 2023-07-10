@@ -7,7 +7,7 @@ def get_wt_wine():
     returns white wine quality dataset from UCI
     with labels removed
     """
-    dataset = pd.read_csv('.../PCPM/datasets/winequality-white.csv', sep=';')
+    dataset = pd.read_csv('.../PCP-Map/datasets/winequality-white.csv', sep=';')
     features = np.delete(dataset.values, -1, axis=1)
     return features
 
@@ -17,7 +17,7 @@ def get_rd_wine():
     returns red wine quality dataset from UCI
     with labels removed
     """
-    dataset = pd.read_csv('.../PCPM/datasets/winequality-red.csv', sep=';')
+    dataset = pd.read_csv('.../PCP-Map/datasets/winequality-red.csv', sep=';')
     features = np.delete(dataset.values, -1, axis=1)
     return features
 
@@ -27,7 +27,7 @@ def get_parkinson():
     returns parkinson telemonitoring dataset from UCI
     with last column removed
     """
-    dataset = pd.read_csv('.../PCPM/datasets/parkinsons_updrs.csv', sep=',')
+    dataset = pd.read_csv('.../PCP-Map/datasets/parkinsons_updrs.csv', sep=',')
     features = np.delete(dataset.values, [0, 1, 2], axis=1)
     return features
 
@@ -36,7 +36,7 @@ def get_concrete():
     """
     returns concrete dataset from UCI
     """
-    dataset = pd.read_excel('.../PCPM/datasets/Concrete_Data.xls').to_numpy()
+    dataset = pd.read_excel('.../PCP-Map/datasets/Concrete_Data.xls').to_numpy()
     return dataset
 
 
@@ -44,7 +44,7 @@ def get_energy():
     """
     returns energy dataset from UCI
     """
-    dataset = pd.read_excel('.../PCPM/datasets/ENB2012_data.xlsx').to_numpy()
+    dataset = pd.read_excel('.../PCP-Map/datasets/ENB2012_data.xlsx').to_numpy()
     return dataset
 
 
@@ -52,7 +52,7 @@ def get_yacht():
     """
     returns yacht dataset from UCI
     """
-    dataset = pd.read_csv('.../PCPM/datasets/yacht_hydrodynamics.data', delim_whitespace=True,
+    dataset = pd.read_csv('.../PCP-Map/datasets/yacht_hydrodynamics.data', delim_whitespace=True,
                           names=['Long pos', 'Prismatic coeff',
                                  'Length-displacement ratio',
                                  'Beam-draught ratio',
