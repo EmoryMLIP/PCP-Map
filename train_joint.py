@@ -212,6 +212,7 @@ if __name__ == '__main__':
 
     makedirs(args.save)
     timeMeter = AverageMeter()
+    vldTotTimeMeter = AverageMeter()
 
     for epoch in range(args.num_epochs):
         for i, sample in enumerate(train_loader):
@@ -277,6 +278,7 @@ if __name__ == '__main__':
                     valLossMeterFICNN.update(mean_valid_loss_ficnn.item(), valid_sample.shape[0])
                     valLossMeterPICNN.update(mean_valid_loss_picnn.item(), valid_sample.shape[0])
 
+                vldTotTimeMeter.update(vldtimeMeter.sum)
                 valid_hist.loc[len(valid_hist.index)] = [vldtimeMeter.sum, valLossMeterFICNN.avg, valLossMeterPICNN.avg]
                 log_message_valid = '   {:9.3e}     {:9.3e}       {:9.3e} '.format(
                     vldtimeMeter.sum, valLossMeterFICNN.avg, valLossMeterPICNN.avg
@@ -321,6 +323,7 @@ if __name__ == '__main__':
                 if ndecs_ficnn > 2:
                     logger.info("early stopping engaged")
                     logger.info("Training Time: {:} seconds".format(timeMeter.sum))
+                    logger.info("Validation Time: {:} seconds".format(vldTotTimeMeter.sum))
                     train_hist.to_csv(os.path.join(args.save, '%s_train_hist.csv' % strTitle))
                     valid_hist.to_csv(os.path.join(args.save, '%s_valid_hist.csv' % strTitle))
                     if args.save_test is False:
@@ -346,6 +349,7 @@ if __name__ == '__main__':
                 if ndecs_picnn > 2:
                     logger.info("early stopping engaged")
                     logger.info("Training Time: {:} seconds".format(timeMeter.sum))
+                    logger.info("Validation Time: {:} seconds".format(vldTotTimeMeter.sum))
                     train_hist.to_csv(os.path.join(args.save, '%s_train_hist.csv' % strTitle))
                     valid_hist.to_csv(os.path.join(args.save, '%s_valid_hist.csv' % strTitle))
                     if args.save_test is False:
@@ -370,6 +374,7 @@ if __name__ == '__main__':
             itr += 1
 
     print('Training time: %.2f secs' % timeMeter.sum)
+    print('Validation time: %.2f secs' % vldTotTimeMeter.sum)
     train_hist.to_csv(os.path.join(args.save, '%s_train_hist.csv' % strTitle))
     valid_hist.to_csv(os.path.join(args.save, '%s_valid_hist.csv' % strTitle))
     if args.save_test is False:
