@@ -13,6 +13,7 @@ from sklearn.model_selection import train_test_split
 from src.icnn import PICNN
 from src.pcpmap import PCPMap
 from src.mmd import mmd
+from datasets.shallow_water import load_swdata
 from lib.utils import count_parameters, makedirs, get_logger, AverageMeter
 
 """
@@ -21,7 +22,7 @@ argument parser for hyper parameters and model handling
 
 parser = argparse.ArgumentParser('PCP-Map')
 parser.add_argument(
-    '--data', choices=['concrete', 'energy', 'yacht', 'lv'], type=str, default='lv'
+    '--data', choices=['concrete', 'energy', 'yacht', 'lv', 'sw'], type=str, default='lv'
 )
 parser.add_argument('--input_x_dim',    type=int, default=4, help="input data convex dimension")
 parser.add_argument('--input_y_dim',    type=int, default=9, help="input data non-convex dimension")
@@ -45,7 +46,7 @@ parser.add_argument('--test_ratio',     type=float, default=0.10, help="test set
 parser.add_argument('--valid_ratio',    type=float, default=0.10, help="validation set ratio")
 parser.add_argument('--random_state',   type=int, default=42, help="random state for splitting dataset")
 
-parser.add_argument('--save_test',      type=bool, default=True, help="save test numerics after training")
+parser.add_argument('--save_test',      type=int, default=1, help="if 1 then saves test numerics 0 if not")
 parser.add_argument('--save',           type=str, default='experiments/cond', help="define the save directory")
 
 args = parser.parse_args()
@@ -149,8 +150,11 @@ Training
 if __name__ == '__main__':
 
     # load data
-    train_loader, valid_loader, n_train = load_data(args.data, args.test_ratio, args.valid_ratio,
-                                                    args.batch_size, args.random_state)
+    if args.data == 'sw':
+        _, train_loader, valid_data, n_train = load_swdata(args.batch_size)
+    else:
+        train_loader, valid_loader, n_train = load_data(args.data, args.test_ratio, args.valid_ratio,
+                                                        args.batch_size, args.random_state)
 
     if args.clip is True:
         reparam = False
@@ -160,10 +164,9 @@ if __name__ == '__main__':
     # Multivariate Gaussian as Reference
     prior_picnn = distributions.MultivariateNormal(torch.zeros(args.input_x_dim).to(device),
                                                    torch.eye(args.input_x_dim).to(device))
-
     # build PCP-Map
     picnn = PICNN(args.input_x_dim, args.input_y_dim, args.feature_dim, args.feature_y_dim,
-                  args.out_dim, args.num_layers_pi, reparam=reparam).to(device)
+                  args.out_dim, args.num_layers_pi, reparam=reparam)
     pcpmap = PCPMap(prior_picnn, picnn).to(device)
 
     optimizer = torch.optim.Adam(pcpmap.parameters(), lr=args.lr)
@@ -199,7 +202,7 @@ if __name__ == '__main__':
 
     for epoch in range(args.num_epochs):
         for i, sample in enumerate(train_loader):
-            if args.data == 'lv':
+            if args.data == 'lv' or args.data == 'sw':
                 x = sample[:, :args.input_x_dim].requires_grad_(True).to(device)
                 y = sample[:, args.input_x_dim:].requires_grad_(True).to(device)
             else:
@@ -236,30 +239,43 @@ if __name__ == '__main__':
 
             if itr % args.valid_freq == 0 or itr % total_itr == 0:
 
-                valLossMeterPICNN = AverageMeter()
-                vldtimeMeter = AverageMeter()
-                for valid_sample in valid_loader:
-                    if args.data == 'lv':
-                        x_valid = valid_sample[:, :args.input_x_dim].requires_grad_(True).to(device)
-                        y_valid = valid_sample[:, args.input_x_dim:].requires_grad_(True).to(device)
-                    else:
-                        x_valid = valid_sample[:, args.input_y_dim:].requires_grad_(True).to(device)
-                        y_valid = valid_sample[:, :args.input_y_dim].requires_grad_(True).to(device)
+                if args.data == 'sw':
+                    x_valid = valid_data[:, :args.input_x_dim].requires_grad_(True).to(device)
+                    y_valid = valid_data[:, args.input_x_dim:].requires_grad_(True).to(device)
                     # start timer
                     end_vld = time.time()
-                    mean_valid_loss_picnn = -pcpmap.loglik_picnn(x_valid, y_valid).mean()
+                    val_loss_picnn = -pcpmap.loglik_picnn(x_valid, y_valid).mean()
                     # end timer
                     vldstep_time = time.time() - end_vld
-                    vldtimeMeter.update(vldstep_time)
-                    valLossMeterPICNN.update(mean_valid_loss_picnn.item(), valid_sample.shape[0])
+                    vldTotTimeMeter.update(vldstep_time)
+                    val_loss_picnn = val_loss_picnn.cpu().detach().numpy()
+                else:
+                    vldtimeMeter = AverageMeter()
+                    valLossMeterPICNN = AverageMeter()
+                    for valid_sample in valid_loader:
+                        if args.data == 'lv':
+                            x_valid = valid_sample[:, :args.input_x_dim].requires_grad_(True).to(device)
+                            y_valid = valid_sample[:, args.input_x_dim:].requires_grad_(True).to(device)
+                        else:
+                            x_valid = valid_sample[:, args.input_y_dim:].requires_grad_(True).to(device)
+                            y_valid = valid_sample[:, :args.input_y_dim].requires_grad_(True).to(device)
+                        # start timer
+                        end_vld = time.time()
+                        mean_valid_loss_picnn = -pcpmap.loglik_picnn(x_valid, y_valid).mean()
+                        # end timer
+                        batch_step_time = time.time() - end_vld
+                        vldtimeMeter.update(batch_step_time)
+                        valLossMeterPICNN.update(mean_valid_loss_picnn.item(), valid_sample.shape[0])
+                    val_loss_picnn = valLossMeterPICNN.avg
+                    vldstep_time = vldtimeMeter.sum
+                    vldTotTimeMeter.update(vldstep_time)
 
-                vldTotTimeMeter.update(vldtimeMeter.sum)
-                valid_hist.loc[len(valid_hist.index)] = [vldtimeMeter.sum, valLossMeterPICNN.avg]
-                log_message_valid = '   {:9.3e}      {:9.3e} '.format(vldtimeMeter.sum, valLossMeterPICNN.avg)
+                valid_hist.loc[len(valid_hist.index)] = [vldstep_time, val_loss_picnn]
+                log_message_valid = '   {:9.3e}      {:9.3e} '.format(vldstep_time, val_loss_picnn)
 
-                if valLossMeterPICNN.avg < best_loss_picnn:
+                if val_loss_picnn < best_loss_picnn:
                     n_vals_wo_improve_picnn = 0
-                    best_loss_picnn = valLossMeterPICNN.avg
+                    best_loss_picnn = val_loss_picnn
                     makedirs(args.save)
                     bestParams_picnn = pcpmap.state_dict()
                     torch.save({
@@ -282,7 +298,7 @@ if __name__ == '__main__':
                     logger.info("Validation Time: {:} seconds".format(vldTotTimeMeter.sum))
                     train_hist.to_csv(os.path.join(args.save, '%s_train_hist.csv' % strTitle))
                     valid_hist.to_csv(os.path.join(args.save, '%s_valid_hist.csv' % strTitle))
-                    if args.save_test is False:
+                    if bool(args.save_test) is False:
                         exit(0)
                     NLL, MMD = evaluate_model(pcpmap, args.data, args.batch_size, args.test_ratio, args.valid_ratio,
                                               args.random_state, args.input_y_dim, args.input_x_dim, args.tol, bestParams_picnn)
@@ -306,7 +322,7 @@ if __name__ == '__main__':
     print('Validation time: %.2f secs' % vldTotTimeMeter.sum)
     train_hist.to_csv(os.path.join(args.save, '%s_train_hist.csv' % strTitle))
     valid_hist.to_csv(os.path.join(args.save, '%s_valid_hist.csv' % strTitle))
-    if args.save_test is False:
+    if bool(args.save_test) is False:
         exit(0)
     NLL, MMD = evaluate_model(pcpmap, args.data, args.batch_size, args.test_ratio, args.valid_ratio,
                               args.random_state, args.input_y_dim, args.input_x_dim, args.tol, bestParams_picnn)

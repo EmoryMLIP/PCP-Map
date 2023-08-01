@@ -45,7 +45,7 @@ parser.add_argument('--test_ratio',     type=float, default=0.10, help="test set
 parser.add_argument('--valid_ratio',    type=float, default=0.10, help="validation set ratio")
 parser.add_argument('--random_state',   type=int, default=42, help="random state for splitting dataset")
 
-parser.add_argument('--save_test',      type=bool, default=True, help="save test numerics after training")
+parser.add_argument('--save_test',      type=int, default=1, help="if 1 then saves test numerics 0 if not")
 parser.add_argument('--save',           type=str, default='experiments/tabjoint', help="define the save directory")
 
 args = parser.parse_args()
@@ -172,9 +172,9 @@ if __name__ == '__main__':
                                                    torch.eye(args.input_x_dim).to(device))
 
     # build FICNN map and PCP-Map
-    ficnn = FICNN(args.input_y_dim, args.feature_dim, args.out_dim, args.num_layers_fi, reparam=reparam).to(device)
+    ficnn = FICNN(args.input_y_dim, args.feature_dim, args.out_dim, args.num_layers_fi, reparam=reparam)
     picnn = PICNN(args.input_x_dim, args.input_y_dim, args.feature_dim, args.feature_y_dim,
-                  args.out_dim, args.num_layers_pi, reparam=reparam).to(device)
+                  args.out_dim, args.num_layers_pi, reparam=reparam)
 
     map_ficnn = MapFICNN(prior_ficnn, ficnn).to(device)
     map_picnn = PCPMap(prior_picnn, picnn).to(device)
@@ -326,7 +326,7 @@ if __name__ == '__main__':
                     logger.info("Validation Time: {:} seconds".format(vldTotTimeMeter.sum))
                     train_hist.to_csv(os.path.join(args.save, '%s_train_hist.csv' % strTitle))
                     valid_hist.to_csv(os.path.join(args.save, '%s_valid_hist.csv' % strTitle))
-                    if args.save_test is False:
+                    if bool(args.save_test) is False:
                         exit(0)
                     NLL, MMD = evaluate_model(map_ficnn, map_picnn, args.data, args.batch_size, args.test_ratio,
                                               args.valid_ratio, args.random_state, args.input_y_dim, args.input_x_dim,
@@ -352,7 +352,7 @@ if __name__ == '__main__':
                     logger.info("Validation Time: {:} seconds".format(vldTotTimeMeter.sum))
                     train_hist.to_csv(os.path.join(args.save, '%s_train_hist.csv' % strTitle))
                     valid_hist.to_csv(os.path.join(args.save, '%s_valid_hist.csv' % strTitle))
-                    if args.save_test is False:
+                    if bool(args.save_test) is False:
                         exit(0)
                     NLL, MMD = evaluate_model(map_ficnn, map_picnn, args.data, args.batch_size, args.test_ratio,
                                               args.valid_ratio, args.random_state, args.input_y_dim, args.input_x_dim,
@@ -377,7 +377,7 @@ if __name__ == '__main__':
     print('Validation time: %.2f secs' % vldTotTimeMeter.sum)
     train_hist.to_csv(os.path.join(args.save, '%s_train_hist.csv' % strTitle))
     valid_hist.to_csv(os.path.join(args.save, '%s_valid_hist.csv' % strTitle))
-    if args.save_test is False:
+    if bool(args.save_test) is False:
         exit(0)
     NLL, MMD = evaluate_model(map_ficnn, map_picnn, args.data, args.batch_size, args.test_ratio,
                               args.valid_ratio, args.random_state, args.input_y_dim, args.input_x_dim,

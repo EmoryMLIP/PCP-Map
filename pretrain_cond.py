@@ -7,6 +7,7 @@ import torch
 import scipy.io
 from torch import distributions
 from lib.dataloader import dataloader
+from datasets.shallow_water import load_swdata
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
 from src.icnn import PICNN
@@ -19,7 +20,7 @@ argument parser for hyper parameters and model handling
 
 parser = argparse.ArgumentParser('PCP-Map')
 parser.add_argument(
-    '--data', choices=['concrete', 'energy', 'yacht', 'lv'], type=str, default='concrete'
+    '--data', choices=['concrete', 'energy', 'yacht', 'lv', 'sw'], type=str, default='concrete'
 )
 parser.add_argument('--input_x_dim',    type=int, default=1, help="input data convex dimension")
 parser.add_argument('--input_y_dim',    type=int, default=8, help="input data non-convex dimension")
@@ -32,6 +33,7 @@ parser.add_argument('--test_ratio',     type=float, default=0.10, help="test set
 parser.add_argument('--valid_ratio',    type=float, default=0.10, help="validation set ratio")
 parser.add_argument('--random_state',   type=int, default=42, help="random state for splitting dataset")
 parser.add_argument('--num_epochs',     type=int, default=15, help="pilot run number of epochs")
+parser.add_argument('--num_trials',     type=int, default=100, help="pilot run number of trials")
 
 parser.add_argument('--save',           type=str, default='experiments/tabcond', help="define the save directory")
 
@@ -104,15 +106,23 @@ if __name__ == '__main__':
     depth_list = np.array([2, 3, 4, 5, 6])
     if args.data == 'lv':
         batch_size_list = np.array([32, 64, 128, 256])
+    elif args.data == 'sw':
+        batch_size_list = np.array([64, 128, 256])
     else:
         batch_size_list = np.array([32, 64])
-    lr_list = np.array([0.01, 0.005, 0.001])
+    if args.data == 'sw':
+        lr_list = np.array([0.001, 0.0005, 0.0001])
+    else:
+        lr_list = np.array([0.01, 0.005, 0.001])
 
-    for trial in range(100):
+    for trial in range(args.num_trials):
 
         batch_size = int(np.random.choice(batch_size_list))
-        train_loader, valid_loader, _ = load_data(args.data, args.test_ratio, args.valid_ratio,
-                                                  batch_size, args.random_state)
+        if args.data == 'sw':
+            _, train_loader, valid_data, _ = load_swdata(batch_size)
+        else:
+            train_loader, valid_loader, _ = load_data(args.data, args.test_ratio, args.valid_ratio,
+                                                      batch_size, args.random_state)
 
         if args.clip is True:
             reparam = False
@@ -120,7 +130,7 @@ if __name__ == '__main__':
             reparam = True
 
         width = np.random.choice(width_list)
-        if args.data == "lv":
+        if args.data == "lv" or args.data == "sw":
             width_y = width
         else:
             width_y_list = [width, args.input_y_dim]
@@ -135,9 +145,8 @@ if __name__ == '__main__':
         # Multivariate Gaussian as Reference
         prior_picnn = distributions.MultivariateNormal(torch.zeros(args.input_x_dim).to(device),
                                                        torch.eye(args.input_x_dim).to(device))
-
         # build PCP-Map
-        picnn = PICNN(args.input_x_dim, args.input_y_dim, width, width_y, args.out_dim, num_layers, reparam=reparam).to(device)
+        picnn = PICNN(args.input_x_dim, args.input_y_dim, width, width_y, args.out_dim, num_layers, reparam=reparam)
         pcpmap = PCPMap(prior_picnn, picnn).to(device)
         optimizer = torch.optim.Adam(pcpmap.parameters(), lr=lr)
 
@@ -145,12 +154,14 @@ if __name__ == '__main__':
 
         if args.data == 'lv':
             num_epochs = 2
+        elif args.data == 'sw':
+            num_epochs = 1
         else:
             num_epochs = args.num_epochs
 
         for epoch in range(num_epochs):
             for sample in train_loader:
-                if args.data == 'lv':
+                if args.data == 'lv' or args.data == 'sw':
                     x = sample[:, :args.input_x_dim].requires_grad_(True).to(device)
                     y = sample[:, args.input_x_dim:].requires_grad_(True).to(device)
                 else:
@@ -171,17 +182,22 @@ if __name__ == '__main__':
 
         valLossMeterPICNN = AverageMeter()
 
-        for valid_sample in valid_loader:
-            if args.data == 'lv':
-                x_valid = valid_sample[:, :args.input_x_dim].requires_grad_(True).to(device)
-                y_valid = valid_sample[:, args.input_x_dim:].requires_grad_(True).to(device)
-            else:
-                x_valid = valid_sample[:, args.input_y_dim:].requires_grad_(True).to(device)
-                y_valid = valid_sample[:, :args.input_y_dim].requires_grad_(True).to(device)
-            mean_valid_loss_picnn = -pcpmap.loglik_picnn(x_valid, y_valid).mean()
-            valLossMeterPICNN.update(mean_valid_loss_picnn.item(), valid_sample.shape[0])
-
-        val_loss_picnn = valLossMeterPICNN.avg
+        if args.data == 'sw':
+            x_valid = valid_data[:, :args.input_x_dim].requires_grad_(True).to(device)
+            y_valid = valid_data[:, args.input_x_dim:].requires_grad_(True).to(device)
+            val_loss_picnn = -pcpmap.loglik_picnn(x_valid, y_valid).mean()
+            val_loss_picnn = val_loss_picnn.cpu().detach().numpy()
+        else:
+            for valid_sample in valid_loader:
+                if args.data == 'lv':
+                    x_valid = valid_sample[:, :args.input_x_dim].requires_grad_(True).to(device)
+                    y_valid = valid_sample[:, args.input_x_dim:].requires_grad_(True).to(device)
+                else:
+                    x_valid = valid_sample[:, args.input_y_dim:].requires_grad_(True).to(device)
+                    y_valid = valid_sample[:, :args.input_y_dim].requires_grad_(True).to(device)
+                mean_valid_loss_picnn = -pcpmap.loglik_picnn(x_valid, y_valid).mean()
+                valLossMeterPICNN.update(mean_valid_loss_picnn.item(), valid_sample.shape[0])
+            val_loss_picnn = valLossMeterPICNN.avg
 
         log_message = '{:05d}  {:9.3e}'.format(trial+1, val_loss_picnn)
         logger.info(log_message)

@@ -88,10 +88,9 @@ if __name__ == '__main__':
                                                        torch.eye(args.input_y_dim).to(device))
         prior_picnn = distributions.MultivariateNormal(torch.zeros(args.input_x_dim).to(device),
                                                        torch.eye(args.input_x_dim).to(device))
-
         # build FICNN map and PCP-Map
-        ficnn = FICNN(args.input_y_dim, width, args.out_dim, num_layers, reparam=reparam).to(device)
-        picnn = PICNN(args.input_x_dim, args.input_y_dim, width, width_y, args.out_dim, num_layers, reparam=reparam).to(device)
+        ficnn = FICNN(args.input_y_dim, width, args.out_dim, num_layers, reparam=reparam)
+        picnn = PICNN(args.input_x_dim, args.input_y_dim, width, width_y, args.out_dim, num_layers, reparam=reparam)
 
         map_ficnn = MapFICNN(prior_ficnn, ficnn).to(device)
         map_picnn = PCPMap(prior_picnn, picnn).to(device)
