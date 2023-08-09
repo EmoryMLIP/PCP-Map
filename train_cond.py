@@ -172,7 +172,7 @@ if __name__ == '__main__':
     optimizer = torch.optim.Adam(pcpmap.parameters(), lr=args.lr)
 
     strTitle = args.data + '_' + sStartTime + '_' + str(args.batch_size) + '_' + str(args.lr) + \
-            '_' + str(args.num_layers_pi) + '_' + str(args.feature_dim)
+               '_' + str(args.num_layers_pi) + '_' + str(args.feature_dim)
 
     logger.info("--------------------------------------------------")
     logger.info("Number of trainable parameters: {}".format(count_parameters(picnn)))
@@ -284,7 +284,8 @@ if __name__ == '__main__':
                     }, os.path.join(args.save, strTitle + '_checkpt.pth'))
                 else:
                     n_vals_wo_improve_picnn += 1
-                log_message_valid += '    picnn no improve: {:d}/{:d}'.format(n_vals_wo_improve_picnn, args.early_stopping)
+                log_message_valid += '    picnn no improve: {:d}/{:d}'.format(n_vals_wo_improve_picnn,
+                                                                              args.early_stopping)
 
                 logger.info(columns_valid)
                 logger.info(log_message_valid)
@@ -300,18 +301,31 @@ if __name__ == '__main__':
                     valid_hist.to_csv(os.path.join(args.save, '%s_valid_hist.csv' % strTitle))
                     if bool(args.save_test) is False:
                         exit(0)
-                    NLL, MMD = evaluate_model(pcpmap, args.data, args.batch_size, args.test_ratio, args.valid_ratio,
-                                              args.random_state, args.input_y_dim, args.input_x_dim, args.tol, bestParams_picnn)
-                    columns_test = ["batch_size", "lr", "width", "width_y", "depth", "NLL", "MMD", "time", "iter"]
-                    test_hist = pd.DataFrame(columns=columns_test)
-                    test_hist.loc[len(test_hist.index)] = [args.batch_size, args.lr, args.feature_dim, args.feature_y_dim,
-                                                           args.num_layers_pi, NLL, MMD, timeMeter.sum, itr]
-                    testfile_name = '.../PCP-Map/experiments/tabcond/' + args.data + '_test_hist.csv'
-                    if os.path.isfile(testfile_name):
-                        test_hist.to_csv(testfile_name, mode='a', index=False, header=False)
+                    elif args.data == 'sw':
+                        os.system(
+                            "python evaluate_sw.py --resume " + ".../PCPM/" + args.save + "/" + strTitle + '_checkpt.pth'
+                        )
+                        exit(0)
+                    elif args.data == 'lv':
+                        os.system(
+                            "python evaluate_lv.py --resume " + ".../PCPM/" + args.save + "/" + strTitle + '_checkpt.pth'
+                        )
+                        exit(0)
                     else:
-                        test_hist.to_csv(testfile_name, index=False)
-                    exit(0)
+                        NLL, MMD = evaluate_model(pcpmap, args.data, args.batch_size, args.test_ratio, args.valid_ratio,
+                                                  args.random_state, args.input_y_dim, args.input_x_dim, args.tol,
+                                                  bestParams_picnn)
+                        columns_test = ["batch_size", "lr", "width", "width_y", "depth", "NLL", "MMD", "time", "iter"]
+                        test_hist = pd.DataFrame(columns=columns_test)
+                        test_hist.loc[len(test_hist.index)] = [args.batch_size, args.lr, args.feature_dim,
+                                                               args.feature_y_dim,
+                                                               args.num_layers_pi, NLL, MMD, timeMeter.sum, itr]
+                        testfile_name = '/local/scratch3/zwan736/PCPM/experiments/tabcond/' + args.data + '_test_hist.csv'
+                        if os.path.isfile(testfile_name):
+                            test_hist.to_csv(testfile_name, mode='a', index=False, header=False)
+                        else:
+                            test_hist.to_csv(testfile_name, index=False)
+                        exit(0)
                 else:
                     update_lr_picnn(optimizer, n_vals_wo_improve_picnn)
                     n_vals_wo_improve_picnn = 0
@@ -324,15 +338,27 @@ if __name__ == '__main__':
     valid_hist.to_csv(os.path.join(args.save, '%s_valid_hist.csv' % strTitle))
     if bool(args.save_test) is False:
         exit(0)
-    NLL, MMD = evaluate_model(pcpmap, args.data, args.batch_size, args.test_ratio, args.valid_ratio,
-                              args.random_state, args.input_y_dim, args.input_x_dim, args.tol, bestParams_picnn)
-
-    columns_test = ["batch_size", "lr", "width", "width_y", "depth", "NLL", "MMD", "time", "iter"]
-    test_hist = pd.DataFrame(columns=columns_test)
-    test_hist.loc[len(test_hist.index)] = [args.batch_size, args.lr, args.feature_dim, args.feature_y_dim, args.num_layers_pi, NLL, MMD,
-                                           timeMeter.sum, itr]
-    testfile_name = '.../PCP-Map/experiments/tabcond/' + args.data + '_test_hist.csv'
-    if os.path.isfile(testfile_name):
-        test_hist.to_csv(testfile_name, mode='a', index=False, header=False)
+    elif args.data == 'sw':
+        os.system(
+            "python evaluate_sw.py --resume " + ".../PCPM/" + args.save + "/" + strTitle + '_checkpt.pth'
+        )
+        exit(0)
+    elif args.data == 'lv':
+        os.system(
+            "python evaluate_lv.py --resume " + ".../PCPM/" + args.save + "/" + strTitle + '_checkpt.pth'
+        )
+        exit(0)
     else:
-        test_hist.to_csv(testfile_name, index=False)
+        NLL, MMD = evaluate_model(pcpmap, args.data, args.batch_size, args.test_ratio, args.valid_ratio,
+                                  args.random_state, args.input_y_dim, args.input_x_dim, args.tol, bestParams_picnn)
+
+        columns_test = ["batch_size", "lr", "width", "width_y", "depth", "NLL", "MMD", "time", "iter"]
+        test_hist = pd.DataFrame(columns=columns_test)
+        test_hist.loc[len(test_hist.index)] = [args.batch_size, args.lr, args.feature_dim, args.feature_y_dim,
+                                               args.num_layers_pi, NLL, MMD,
+                                               timeMeter.sum, itr]
+        testfile_name = '/local/scratch3/zwan736/PCPM/experiments/tabcond/' + args.data + '_test_hist.csv'
+        if os.path.isfile(testfile_name):
+            test_hist.to_csv(testfile_name, mode='a', index=False, header=False)
+        else:
+            test_hist.to_csv(testfile_name, index=False)

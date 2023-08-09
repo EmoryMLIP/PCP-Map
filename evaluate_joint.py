@@ -13,7 +13,7 @@ from src.mmd import mmd
 from lib.utils import AverageMeter
 
 parser = argparse.ArgumentParser('PCP-Map')
-parser.add_argument('--resume',         type=str, default="experiments/tabular/rd_wine_2022_11_09_20_17_42_checkpt.pth")
+parser.add_argument('--resume',         type=str, default="experiments/tabcond/...")
 
 args = parser.parse_args()
 

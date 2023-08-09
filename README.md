@@ -1,41 +1,31 @@
-# Partially Convex Potential Maps (PCPM)
-Pytorch implementation of our Partially Convex Potential Maps. The model constructs monotone 
-block triangular transport maps between probability measures as gradients of ICNNs.
+# Partially Convex Potential Maps (PCP-Map)
+Pytorch implementation of our Partially Convex Potential Maps. The model constructs partially 
+monotone transport maps between probability measures as gradients of partially input convex 
+neural networks (PICNN).
 
-## Toy problems
+## UCI Tabular Datasets Experiments
+We test PCP-Map's performance on learning both the map between joint probability measures
+(by constructing a block triangular transport map) with the assist of a fully input convex 
+neural networks (FICNN) and the between conditional measures. Note that for some of the following 
+scripts, users have to set the appropriate arguments in the parser according to which dataset 
+they are learning.
 
-Train a toy example
-```
-python train_toy.py
-```
-
-Plot results of a pre-trained model
-```
-python evaluate_toy.py
-```
-
-## Small tabular dataset experiment
-
-Perform pilot runs:
+Perform pilot runs to search for best hyperparameter combinations:
 
 ```
 python pretrain_cond.py
 python pretrain_joint.py
 ```
 
-Perform experiments with best models:
+Perform experiments with the 10 best hyperparameter combinations from pilot runs:
 ```
 python experiment_tab_cond.py
 python experiment_tab_joint.py
 ```
 
-Train a single PCPM model to learn the block triangular map:
+Train a single PCPM model:
 ```
 python train_joint.py
-```
-
-Train a single PCPM model to learn the conditional map:
-```
 python train_cond.py
 ```
 
@@ -45,15 +35,14 @@ python evaluate_cond.py
 python evaluate_joint.py
 ```
 
-## Stochastic Lotka Volterra
+## Stochastic Lotka-Volterra Experiment
 
-Perform pilot run:
+Perform pilot runs to search for best hyperparameter combination:
 ```
-python pretrain_cond.py
+python pretrain_cond.py --data 'lv' --input_x_dim 4 --input_y_dim 9
 ```
-with dataset as "lv".
 
-Perform training with the best model:
+Perform training with the best hyperparameter combination:
 ```
 python experiment_lv.py
 ```
@@ -61,4 +50,20 @@ python experiment_lv.py
 Evaluate the trained model
 ```
 python evaluate_lv.py
+```
+
+## 1D Shallow Water Equations Experiment
+Perform pilot runs to search for best hyperparameter combination:
+```
+python pretrain_cond.py --data 'sw' --input_x_dim 100 --input_y_dim 3500
+```
+
+Perform training with the best hyperparameter combination:
+```
+python experiment_sw.py
+```
+
+Evaluate the trained model
+```
+python evaluate_sw.py
 ```

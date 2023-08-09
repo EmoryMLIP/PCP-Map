@@ -107,11 +107,11 @@ if __name__ == '__main__':
     if args.data == 'lv':
         batch_size_list = np.array([32, 64, 128, 256])
     elif args.data == 'sw':
-        batch_size_list = np.array([64, 128, 256])
+        batch_size_list = np.array([64, 128])
     else:
         batch_size_list = np.array([32, 64])
     if args.data == 'sw':
-        lr_list = np.array([0.001, 0.0005, 0.0001])
+        lr_list = np.array([0.0001])
     else:
         lr_list = np.array([0.01, 0.005, 0.001])
 

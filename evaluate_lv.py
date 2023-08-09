@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 from lib.utils import AverageMeter
 
 parser = argparse.ArgumentParser('PCP-Map')
-parser.add_argument('--resume',    type=str, default="/experiments/tabcond/lv/lv_2023_04_12_14_52_05_64_0.005_5_512_checkpt.pth")
+parser.add_argument('--resume',    type=str, default="/experiments/tabcond/lv/...")
 
 args = parser.parse_args()
 

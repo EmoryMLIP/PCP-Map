@@ -1,4 +1,3 @@
-import os
 from os import listdir
 from os.path import join
 import pandas as pd
@@ -14,7 +13,7 @@ def create_data_swe(num_eigs, save=True):
 
     """Obtain Data"""
 
-    path_to_sims = '.../PCPM/datasets/shallow_water_data/'
+    path_to_sims = '.../PCP-Map/datasets/shallow_water_data/'
     files = sorted(f for f in listdir(path_to_sims) if f.endswith(".npz"))
 
     # Load data sequentially from files
@@ -40,7 +39,7 @@ def create_data_swe(num_eigs, save=True):
     L, V = torch.linalg.eigh(x_cov_est)
     # calculate percentage of spectrum captured
     percentage = 100*sum(L[x_cov_est.shape[0]-num_eigs:])/sum(L)
-    print("Percentage of Spectrum: " + str(percentage.item()) + '%')
+    print("Percentage of Spectrum with " + str(num_eigs) + " eigenvalues is: " + str(percentage.item()) + '%')
 
     """Project Data"""
 
@@ -59,7 +58,7 @@ def create_data_swe(num_eigs, save=True):
 
 def load_swdata(batch_size):
     # Load Data
-    dataset = pd.read_csv('.../PCPM/datasets/shallow_water_data3500.csv', sep=',').to_numpy()
+    dataset = pd.read_csv('.../PCP-Map/datasets/shallow_water_data3500.csv', sep=',').to_numpy()
     # Split, Normalize
     train, valid = train_test_split(
         dataset,

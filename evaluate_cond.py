@@ -7,7 +7,7 @@ from src.pcpmap import PCPMap
 from src.mmd import mmd
 
 parser = argparse.ArgumentParser('PCP-Map')
-parser.add_argument('--resume',      type=str, default="experiments/condition/concrete_2023_03_05_11_50_28_checkpt.pth")
+parser.add_argument('--resume',      type=str, default="experiments/tabcond/...")
 
 args = parser.parse_args()
 

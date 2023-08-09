@@ -16,7 +16,7 @@ width_y = int(param_list[3])
 num_layers = int(param_list[4])
 
 os.system(
-    "python train_cond.py --data 'sw' --valid_freq 50 --early_stopping 20  --input_x_dim 100 --input_y_dim 3500\
+    "python train_cond.py --data 'sw' --valid_freq 70 --early_stopping 20  --input_x_dim 100 --input_y_dim 3500\
      --num_layers_pi " + str(num_layers) + " --feature_dim " + str(width) + " --feature_y_dim " + str(width_y) +
-    " --batch_size " + str(batch_size) + " --lr " + str(lr) + " --save_test 0 --save 'experiments/tabcond/sw'"
+    " --batch_size " + str(batch_size) + " --lr " + str(lr) + " --save_test 1 --save 'experiments/tabcond/sw'"
 )
