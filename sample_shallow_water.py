@@ -6,8 +6,8 @@ from os.path import join
 
 import numpy as np
 
-from datasets.shallow_water_model.prior import DepthProfilePrior as Prior
-from datasets.shallow_water_model.simulator import ShallowWaterSimulator as Simulator
+from shallow_water_model.prior import DepthProfilePrior as Prior
+from shallow_water_model.simulator import ShallowWaterSimulator as Simulator
 
 
 def _seed_by_time_stamp(num_seeds):

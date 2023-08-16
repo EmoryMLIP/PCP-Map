@@ -15,8 +15,8 @@ from src.icnn import PICNN
 from src.pcpmap import PCPMap
 from datasets import shallow_water
 import matplotlib.pyplot as plt
-from datasets.shallow_water_model.simulator import ShallowWaterSimulator as Simulator
-from datasets.shallow_water_model.prior import DepthProfilePrior as Prior
+from shallow_water_model.simulator import ShallowWaterSimulator as Simulator
+from shallow_water_model.prior import DepthProfilePrior as Prior
 
 parser = argparse.ArgumentParser('PCP-Map')
 parser.add_argument('--resume', type=str, default="/experiments/tabcond/sw/...")
@@ -25,7 +25,7 @@ args = parser.parse_args()
 
 
 def _fwd_pass_fourier(profile, seedz):
-    _, z = Simulator(outdir=seed_depth, fourier=True)(
+    _, z = Simulator(outdir=0, fourier=True)(
         profile, seeds_u=[42], seeds_z=[seedz]
     )
     return z
