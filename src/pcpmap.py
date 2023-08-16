@@ -34,7 +34,7 @@ class PCPMap(nn.Module):
         """
         # quadratic term for strong convexity
         quad = x*x / 2
-        return F.softplus(self.w1_picnn) * F.softplus(self.picnn(x, y)) + (F.relu(self.w2_picnn)+F.softplus(self.w3_picnn)) * quad
+        return F.softplus(self.w1_picnn) * self.picnn(x, y) + (F.relu(self.w2_picnn)+F.softplus(self.w3_picnn)) * quad
 
     def compute_sum(self, x, y):
         return self.get_picnn(x, y).sum()

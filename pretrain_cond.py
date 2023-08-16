@@ -104,10 +104,8 @@ if __name__ == '__main__':
     # sample space for hyperparameters
     width_list = np.array([32, 64, 128, 256, 512])
     depth_list = np.array([2, 3, 4, 5, 6])
-    if args.data == 'lv':
-        batch_size_list = np.array([32, 64, 128, 256])
-    elif args.data == 'sw':
-        batch_size_list = np.array([64, 128])
+    if args.data == 'lv' or args.data == 'sw':
+        batch_size_list = np.array([64, 128, 256])
     else:
         batch_size_list = np.array([32, 64])
     if args.data == 'sw':

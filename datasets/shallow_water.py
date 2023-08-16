@@ -1,6 +1,6 @@
+import os
 from os import listdir
 from os.path import join
-import pandas as pd
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
@@ -12,9 +12,10 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 def create_data_swe(num_eigs, save=True):
 
     """Obtain Data"""
-
+    # TODO change to local directory
     path_to_sims = '.../PCP-Map/datasets/shallow_water_data/'
-    files = sorted(f for f in listdir(path_to_sims) if f.endswith(".npz"))
+    #  list all files whose names start with 'data_' and end in 'npz'
+    files = sorted(f for f in listdir(path_to_sims) if f.startswith('data_') and f.endswith('.npz'))
 
     # Load data sequentially from files
     depth_profiles, z_vals = [], []
@@ -52,13 +53,16 @@ def create_data_swe(num_eigs, save=True):
     dataset = np.concatenate((theta, x_proj), axis=1)
     # save data
     if save is True:
-        np.savetxt("shallow_water_data" + str(num_eigs) + ".csv", dataset, delimiter=",")
+        # save dataset in npz file
+        np.savez_compressed(os.path.join(path_to_sims, 'shallow_water_data' + str(num_eigs) + '.npz'), dataset=dataset)
     return Vs
 
 
 def load_swdata(batch_size):
-    # Load Data
-    dataset = pd.read_csv('.../PCP-Map/datasets/shallow_water_data3500.csv', sep=',').to_numpy()
+    # get directory of this file
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    # load dataset
+    dataset = np.load(os.path.join(dir_path, 'shallow_water_data3500.npz'))['dataset']
     # Split, Normalize
     train, valid = train_test_split(
         dataset,

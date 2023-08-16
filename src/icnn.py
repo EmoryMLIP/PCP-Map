@@ -96,9 +96,8 @@ class FICNN(nn.Module):
 
 class PICNN(nn.Module):
 
-    def __init__(self, input_x_dim: int, input_y_dim: int, feature_dim: int, feature_y_dim: int,
-                 out_dim: int, num_layers: int, act=F.softplus, act_v=nn.PReLU(num_parameters=1, init=0.01),
-                 nonneg=F.relu, reparam=True) -> None:
+    def __init__(self, input_x_dim: int, input_y_dim: int, feature_dim: int, feature_y_dim: int, out_dim: int,
+                 num_layers: int, act=F.softplus, act_v=nn.ELU(), nonneg=F.relu, reparam=True) -> None:
         """
         Implementation of the Partially Input Convex Neural Networks (Amos et al., 2017)
         non-negative weights restricted using reparameterization or non-negative clipping
@@ -214,7 +213,7 @@ class PICNN(nn.Module):
 
         # last layer activation
         down = 1 / len(w.t())
-        vK = torch.tanh(self.Lv[-1](v))
+        vK = self.act_v(self.Lv[-1](v))
         wK_prod = torch.mul(w, F.relu(self.Lwv[-1](vK)))
         xK_prod = torch.mul(in_x, self.Lxv[-1](vK))
         if self.reparam is True:
