@@ -33,7 +33,7 @@ class MapFICNN(nn.Module):
         """
         # quadratic term for strong convexity
         quad = y*y / 2
-        return F.softplus(self.w1_ficnn) * self.ficnn(y) + (F.relu(self.w2_ficnn)+F.softplus(self.w3_ficnn)) * quad
+        return F.softplus(self.w1_ficnn) * F.softplus(self.ficnn(y)) + (F.relu(self.w2_ficnn)+F.softplus(self.w3_ficnn)) * quad
 
     def compute_sum(self, y):
         return self.get_ficnn(y).sum()

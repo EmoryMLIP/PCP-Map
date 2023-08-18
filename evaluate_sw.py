@@ -15,6 +15,9 @@ from src.icnn import PICNN
 from src.pcpmap import PCPMap
 from datasets import shallow_water
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
+from scipy.stats import binom
+from src.sbc_analysis import get_rank_statistic
 from shallow_water_model.simulator import ShallowWaterSimulator as Simulator
 from shallow_water_model.prior import DepthProfilePrior as Prior
 
@@ -69,7 +72,7 @@ def process_test_data(obs, mean, std, x_dim):
 
 
 def generate_theta(generator, x_cond, mean, std, x_dim, tol, num_samples=100):
-    zx = torch.randn(num_samples, 100).to(device)
+    zx = torch.randn(num_samples, x_dim).to(device)
     x_cond_tensor = torch.tensor(x_cond, dtype=torch.float32)
     # start sampling timer
     start = time.time()
@@ -80,7 +83,7 @@ def generate_theta(generator, x_cond, mean, std, x_dim, tol, num_samples=100):
     print(f"Number of closure calls: {num_evals}")
     theta_gen = x_gen.detach().cpu().numpy()
     # scale back
-    theta_gen = (theta_gen * std[:, :x_dim] + mean[:, :x_dim] + 10).squeeze()
+    theta_gen = (theta_gen * std[:, :x_dim] + mean[:, :x_dim] + 10.0).squeeze()
     return theta_gen
 
 
@@ -257,6 +260,62 @@ if __name__ == '__main__':
     # save
     fig.tight_layout()
     sPath = os.path.join(checkpt['args'].save, 'figs', checkpt['args'].data + '_pcp_figure.png')
+    if not os.path.exists(os.path.dirname(sPath)):
+        os.makedirs(os.path.dirname(sPath))
+    plt.savefig(sPath, dpi=300)
+    plt.close()
+
+    """Perform SBC Analysis"""
+
+    path_to_samps = '.../PCP-Map/datasets/sw_test_data.npz'
+    ranks, _ = get_rank_statistic(pcpmap, train_mean, train_std, checkpt['args'].tol, path_to_samps)
+
+    # plot ranks
+    ndim, N = ranks.shape
+    nbins = N
+    repeats = 1
+    hb = binom(N, p=1 / nbins).ppf(0.5) * np.ones(nbins)
+    hbb = hb.cumsum() / hb.sum()
+    lower = [binom(N, p=p).ppf(0.005) for p in hbb]
+    upper = [binom(N, p=p).ppf(0.995) for p in hbb]
+
+    # Plot CDF
+    fig = plt.figure(figsize=(8, 5))
+    fig.tight_layout(pad=3.0)
+    spec = fig.add_gridspec(ncols=1, nrows=1)
+    ax = fig.add_subplot(spec[0, 0])
+    for i in range(ndim):
+        hist, *_ = np.histogram(ranks[i], bins=nbins, density=False)
+        histcs = hist.cumsum()
+        ax.plot(np.linspace(0, nbins, repeats * nbins),
+                np.repeat(histcs / histcs.max(), repeats),
+                color='r',
+                alpha=.1
+                )
+    ax.plot(np.linspace(0, nbins, repeats * nbins),
+            np.repeat(hbb, repeats),
+            color="k", lw=2,
+            alpha=.8,
+            label="uniform CDF")
+    ax.fill_between(x=np.linspace(0, nbins, repeats * nbins),
+                    y1=np.repeat(lower / np.max(lower), repeats),
+                    y2=np.repeat(upper / np.max(lower), repeats),
+                    color='k',
+                    alpha=.5)
+    # Ticks and axes
+    ax.set_xticks([0, 500, 1000])
+    ax.set_xlim([0, 1000])
+    ax.set_xlabel("Rank")
+    ax.set_yticks([0, .5, 1.])
+    ax.set_ylim([0., 1.])
+    ax.set_ylabel("CDF")
+    # Legend
+    custom_lines = [Line2D([0], [0], color="k", lw=1.5, linestyle="-"),
+                    Line2D([0], [0], color='r', lw=1.5, linestyle="-")
+                    ]
+    ax.legend(custom_lines, ['Uniform CDF', 'PCP-Map'])
+
+    sPath = os.path.join(checkpt['args'].save, 'figs', checkpt['args'].data + '_pcp_sbc.png')
     if not os.path.exists(os.path.dirname(sPath)):
         os.makedirs(os.path.dirname(sPath))
     plt.savefig(sPath, dpi=300)
