@@ -2,9 +2,10 @@ from os.path import join
 import numpy as np
 import torch
 import torch.nn as nn
-from datasets import shallow_water
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+path_to_data = ".../PCP-Map/datasets/shallow_water_data3500.npz"
 
 
 def process_test_data(obs, mean, std, proj_mat, x_dim):
@@ -48,7 +49,7 @@ def get_rank_statistic(
     sbc = np.load(path_to_samples)
     thos = torch.FloatTensor(sbc["depth_profile"])
     xos = torch.FloatTensor(sbc["z_vals"])[:, :, :, 1:, :]
-    Vs = shallow_water.create_data_swe(num_eigs=3500, save=False).cpu().numpy()
+    Vs = np.load(path_to_data)['Vs']
 
     # Calculate ranks
     ndim = thos.shape[-1]

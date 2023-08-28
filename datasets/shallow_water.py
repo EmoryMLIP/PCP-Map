@@ -54,7 +54,8 @@ def create_data_swe(num_eigs, save=True):
     # save data
     if save is True:
         # save dataset in npz file
-        np.savez_compressed(os.path.join(path_to_sims, 'shallow_water_data' + str(num_eigs) + '.npz'), dataset=dataset)
+        np.savez_compressed(os.path.join(path_to_sims, 'shallow_water_data' + str(num_eigs) + '.npz'),
+                            dataset=dataset, Vs=Vs.cpu().numpy())
     return Vs
 
 

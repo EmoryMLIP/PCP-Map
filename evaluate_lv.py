@@ -31,6 +31,7 @@ def experiment(LV, abc_dat_path, theta_star, model, trn_mean, trn_std, checkpt):
     y_theta_star_norm_tensor = torch.tensor(y_theta_star_norm, dtype=torch.float32)
 
     """generate samples"""
+
     zx = torch.randn(2000, 4).to(device)
     # start sampling timer
     start = time.time()
@@ -44,6 +45,7 @@ def experiment(LV, abc_dat_path, theta_star, model, trn_mean, trn_std, checkpt):
     theta_gen = (theta_gen * trn_std[:, :input_x_dim] + trn_mean[:, :input_x_dim]).squeeze()
 
     """tolerance decrement experiment"""
+
     tol_list = [1e-5, 1e-4, 1e-3, 1e-2, 1e-1]
     for tol in tol_list:
         # start sampling timer
@@ -61,6 +63,7 @@ def experiment(LV, abc_dat_path, theta_star, model, trn_mean, trn_std, checkpt):
         print(f"Norm Error for theta {theta_star[0].item()} tol={tol}: {error}")
 
     """plot"""
+
     theta_star_log = np.log(theta_star)
     symbols = [r'$\theta_1$', r'$\theta_2$', r'$\theta_3$', r'$\theta_4$']
     log_limits = [[-5., 2.], [-5., 2.], [-5., 2.], [-5., 2.]]
@@ -83,6 +86,7 @@ def experiment(LV, abc_dat_path, theta_star, model, trn_mean, trn_std, checkpt):
     plt.close()
 
     """plot posterior predictive"""
+
     plt.figure()
     ytrue = LV.simulate(theta_star)
     c1 = plt.plot(LV.tt, ytrue[:, 0], '-', label='Predators')
@@ -130,6 +134,7 @@ def experiment(LV, abc_dat_path, theta_star, model, trn_mean, trn_std, checkpt):
 if __name__ == '__main__':
 
     """Load Saved Model"""
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     checkpt = torch.load(args.resume, map_location=lambda storage, loc: storage)
 
@@ -152,6 +157,7 @@ if __name__ == '__main__':
     pcpmap = pcpmap.to(device)
 
     """Testing"""
+
     dataset_load = scipy.io.loadmat('.../PCP-Map/datasets/training_data.mat')
     x_train = dataset_load['x_train']
     y_train = dataset_load['y_train']
@@ -176,7 +182,8 @@ if __name__ == '__main__':
     experiment(StochLV, path_theta2, theta2, pcpmap, train_mean, train_std, checkpt)
 
     """Density Estimation"""
-    test_dataset_load = scipy.io.loadmat('.../PCPM/datasets/test_data.mat')
+
+    test_dataset_load = scipy.io.loadmat('.../PCPM/datasets/lv_test_data.mat')
     test_dat = test_dataset_load['test_data']
     # log transformation over theta
     test_dat[:, :4] = np.log(test_dat[:, :4])

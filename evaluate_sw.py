@@ -13,7 +13,6 @@ from sklearn.model_selection import train_test_split
 from torch import distributions
 from src.icnn import PICNN
 from src.pcpmap import PCPMap
-from datasets import shallow_water
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from scipy.stats import binom
@@ -23,6 +22,8 @@ from shallow_water_model.prior import DepthProfilePrior as Prior
 
 parser = argparse.ArgumentParser('PCP-Map')
 parser.add_argument('--resume', type=str, default="/experiments/tabcond/sw/...")
+parser.add_argument('--resume50k', type=str, default="/experiments/tabcond/sw/...")
+parser.add_argument('--resume20k', type=str, default="/experiments/tabcond/sw/...")
 
 args = parser.parse_args()
 
@@ -62,10 +63,9 @@ def wave_wout_noise(theta):
     return z[1:, :]
 
 
-def process_test_data(obs, mean, std, x_dim):
+def process_test_data(obs, proj, mean, std, x_dim):
     # project observation
-    Vs = shallow_water.create_data_swe(num_eigs=3500, save=False).cpu().numpy()
-    x_star_proj = Vs.T @ obs
+    x_star_proj = proj.T @ obs
     # normalize
     x_star_proj_norm = (x_star_proj.T - mean[:, x_dim:]) / std[:, x_dim:]
     return x_star_proj_norm
@@ -124,45 +124,61 @@ def plot_prior_predictives(axis, t, x_cond_wonoise, priors, y_lab=True, num_samp
     axis.text(0.1, 0.9, f"t = {t+1}", transform=axis.transAxes, fontsize=20)
 
 
-if __name__ == '__main__':
-
-    """Set up PCP-Map"""
-
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    checkpt = torch.load(args.resume, map_location=lambda storage, loc: storage)
-
-    input_x_dim = checkpt['args'].input_x_dim
-    input_y_dim = checkpt['args'].input_y_dim
-    feature_dim = checkpt['args'].feature_dim
-    feature_y_dim = checkpt['args'].feature_y_dim
-    out_dim = checkpt['args'].out_dim
-    num_layers_pi = checkpt['args'].num_layers_pi
-    clip = checkpt['args'].clip
+def build_pcpmap(check_point, prior):
+    input_x_dim = check_point['args'].input_x_dim
+    input_y_dim = check_point['args'].input_y_dim
+    feature_dim = check_point['args'].feature_dim
+    feature_y_dim = check_point['args'].feature_y_dim
+    out_dim = check_point['args'].out_dim
+    num_layers_pi = check_point['args'].num_layers_pi
+    clip = check_point['args'].clip
     if clip is True:
         reparam = False
     else:
         reparam = True
+    picnn = PICNN(input_x_dim, input_y_dim, feature_dim, feature_y_dim, out_dim, num_layers_pi, reparam=reparam)
+    pcpmap = PCPMap(prior, picnn)
+    pcpmap.load_state_dict(check_point["state_dict_picnn"])
+    return pcpmap.to(device)
 
+
+def load_data_info(file_path, valid_ratio):
+    data = np.load(file_path)['dataset']
+    V = np.load(file_path)['Vs']
+    trn, vld = train_test_split(data, test_size=valid_ratio, random_state=42)
+    mean = np.mean(trn, axis=0, keepdims=True)
+    std = np.std(trn, axis=0, keepdims=True)
+    return data, V, mean, std
+
+
+if __name__ == '__main__':
+
+    """Set up PCP-Maps"""
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    # load checkpoints
+    checkpt = torch.load(args.resume, map_location=lambda storage, loc: storage)
+    checkpt_50k = torch.load(args.resume50k, map_location=lambda storage, loc: storage)
+    checkpt_20k = torch.load(args.resume20k, map_location=lambda storage, loc: storage)
+    # build maps
+    input_x_dim = checkpt['args'].input_x_dim
     prior_picnn = distributions.MultivariateNormal(torch.zeros(input_x_dim).to(device), torch.eye(input_x_dim).to(device))
-    picnn = PICNN(input_x_dim, input_y_dim, feature_dim, feature_y_dim, out_dim, num_layers_pi, reparam=reparam).to(device)
-    pcpmap = PCPMap(prior_picnn, picnn)
-    pcpmap.load_state_dict(checkpt["state_dict_picnn"])
-    pcpmap = pcpmap.to(device)
+    pcpmap = build_pcpmap(checkpt, prior_picnn)
+    pcpmap50k = build_pcpmap(checkpt_50k, prior_picnn)
+    pcpmap20k = build_pcpmap(checkpt_20k, prior_picnn)
 
     """Grab Training Mean and STD"""
 
-    dataset, _, _, _ = shallow_water.load_swdata(checkpt['args'].batch_size)
-    train, valid = train_test_split(
-        dataset,
-        test_size=0.001,
-        random_state=42
-    )
-    train_mean = np.mean(train, axis=0, keepdims=True)
-    train_std = np.std(train, axis=0, keepdims=True)
+    file_path = '.../PCP-Map/datasets/shallow_water_data3500.npz'
+    file_path50k = '.../PCP-Map/datasets/shallow_water_data3500_50k.npz'
+    file_path20k = '.../PCP-Map/datasets/shallow_water_data3500_20k.npz'
 
-    """
-    Preparing Plotting Data
-    """
+    dataset, Vs, train_mean, train_std = load_data_info(file_path, 0.001)
+    _, Vs50k, train_mean_50k, train_std_50k = load_data_info(file_path50k, 0.002)
+    _, Vs20k, train_mean_20k, train_std_20k = load_data_info(file_path20k, 0.005)
+
+    """Preparing Plotting Data"""
 
     # sample for ground truth prior
     seed_depth = 77777
@@ -182,12 +198,10 @@ if __name__ == '__main__':
     scipy.io.savemat(file_name, {'theta_gt': theta_star, 'x_gt': x_star_fourier, 'wave_gt': x_star_nofourier_nonosie})
 
     # generate theta from PCP-Map
-    x_star_processed = process_test_data(x_star_fourier, train_mean, train_std, input_x_dim)
+    x_star_processed = process_test_data(x_star_fourier, Vs, train_mean, train_std, input_x_dim)
     theta_samples = generate_theta(pcpmap, x_star_processed, train_mean, train_std, input_x_dim, checkpt['args'].tol)
 
-    """
-    Ground Truth Plotting
-    """
+    """Ground Truth Plotting"""
 
     # create plot grid for ground truth values
     fig, axs = plt.subplots(1, 5)
@@ -226,9 +240,7 @@ if __name__ == '__main__':
     plt.savefig(sPath, dpi=300)
     plt.close()
 
-    """
-    PCP Posterior Plotting
-    """
+    """PCP Posterior Plotting"""
 
     # create plot grid for ground truth values
     fig, axs = plt.subplots(1, 5)
@@ -321,11 +333,55 @@ if __name__ == '__main__':
     plt.savefig(sPath, dpi=300)
     plt.close()
 
-    """Evaluate Ground Truth NLL"""
+    """Plot PCP from Different Data Size"""
 
-    x_test = torch.tensor((theta_star.reshape(1, -1) - train_mean[:, :100] - 10) / train_std[:, :100],
-                          dtype=torch.float32).to(device)
-    y_test = torch.tensor(x_star_processed, dtype=torch.float32).reshape(1, -1).to(device)
-    x_test.requires_grad_(True)
-    y_test.requires_grad_(True)
-    print("Ground Truth NLL: " + str(-pcpmap.loglik_picnn(x_test, y_test).mean().item()))
+    # sample from posterior
+    x_star_processed50k = process_test_data(x_star_fourier, Vs50k, train_mean_50k, train_std_50k, input_x_dim)
+    theta_samples50k = generate_theta(pcpmap50k, x_star_processed50k, train_mean_50k, train_std_50k, input_x_dim, checkpt_50k['args'].tol)
+    x_star_processed20k = process_test_data(x_star_fourier, Vs20k, train_mean_20k, train_std_20k, input_x_dim)
+    theta_samples20k = generate_theta(pcpmap20k, x_star_processed20k, train_mean_20k, train_std_20k, input_x_dim, checkpt_20k['args'].tol)
+
+    # grab mean and std
+    mean100k = np.mean(theta_samples, axis=0, keepdims=True).squeeze()
+    std100k = np.std(theta_samples, axis=0, keepdims=True).squeeze()
+    mean50k = np.mean(theta_samples50k, axis=0, keepdims=True).squeeze()
+    std50k = np.std(theta_samples50k, axis=0, keepdims=True).squeeze()
+    mean20k = np.mean(theta_samples20k, axis=0, keepdims=True).squeeze()
+    std20k = np.std(theta_samples20k, axis=0, keepdims=True).squeeze()
+
+    # calculate normed error and plot
+    err_100k = np.linalg.norm(theta_star - mean100k) / np.linalg.norm(theta_star)
+    err_50k = np.linalg.norm(theta_star - mean50k) / np.linalg.norm(theta_star)
+    err_20k = np.linalg.norm(theta_star - mean20k) / np.linalg.norm(theta_star)
+
+    # plot
+    font = {'fontname': 'Times'}
+    fig, axs = plt.subplots(1, 3)
+    fig.set_size_inches(28, 8)
+
+    xx = np.linspace(1, 100, 100)
+    axs[0].plot(xx, theta_star, c='k', label="Ground Truth")
+    axs[0].plot(xx, mean20k, c='g', label="Posterior Mean 20k")
+    axs[0].fill_between(xx, (mean20k - std20k), (mean20k + std20k), color='grey', alpha=0.2)
+    axs[0].set_ylabel('Depth', fontsize=26)
+    axs[0].text(10, 5, f"rel. error = {err_20k:.2f}", fontsize=20, **font)
+    axs[0].legend(fontsize="16")
+
+    axs[1].plot(xx, theta_star, c='k', label="Ground Truth")
+    axs[1].plot(xx, mean50k, c='b', label="Posterior Mean 50k")
+    axs[1].fill_between(xx, (mean50k - std50k), (mean50k + std50k), color='grey', alpha=0.2)
+    axs[1].set_xlabel('Position', fontsize=26)
+    axs[1].text(10, 5.35, f"rel. error = {err_50k:.2f}", fontsize=20, **font)
+    axs[1].legend(fontsize="16")
+
+    axs[2].plot(xx, theta_star, c='k', label="Ground Truth")
+    axs[2].plot(xx, mean100k, c='r', label="Posterior Mean 100k")
+    axs[2].fill_between(xx, (mean100k - std100k), (mean100k + std100k), color='grey', alpha=0.2)
+    axs[2].text(10, 6.45, f"rel. error = {err_100k:.2f}", fontsize=20, **font)
+    axs[2].legend(fontsize="16")
+
+    sPath = os.path.join(checkpt['args'].save, 'figs', checkpt['args'].data + '_pcp_numsims.png')
+    if not os.path.exists(os.path.dirname(sPath)):
+        os.makedirs(os.path.dirname(sPath))
+    plt.savefig(sPath, bbox_inches='tight', dpi=300)
+    plt.close()
