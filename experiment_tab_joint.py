@@ -2,6 +2,7 @@ import os
 import numpy as np
 import pandas as pd
 
+# TODO change to correct paths
 loss_pk = pd.read_csv('.../PCP-Map/experiments/tabjoint/parkinson_valid_hist.csv').to_numpy()
 loss_rd = pd.read_csv('.../PCP-Map/experiments/tabjoint/rd_wine_valid_hist.csv').to_numpy()
 loss_wt = pd.read_csv('.../PCP-Map/experiments/tabjoint/wt_wine_valid_hist.csv').to_numpy()

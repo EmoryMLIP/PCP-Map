@@ -5,6 +5,7 @@ import torch.nn as nn
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+# TODO change to correct path
 path_to_data = ".../PCP-Map/datasets/shallow_water_data3500.npz"
 
 
@@ -16,10 +17,14 @@ def process_test_data(obs, mean, std, proj_mat, x_dim):
     return x_star_proj_norm
 
 
-def generate_theta(generator, x_cond, mean, std, x_dim, tol, num_samps):
+def generate_theta(generator, x_cond, mean, std, x_dim, tol, num_samps, proj_x=None):
     zx = torch.randn(num_samps, x_dim).to(device)
+    if proj_x is not None:
+        zx = torch.randn(num_samps, 14).to(device)
     x_cond_tensor = torch.tensor(x_cond, dtype=torch.float32)
     x_gen, num_evals = generator.gx(zx, x_cond_tensor.to(device), tol)
+    if proj_x is not None:
+        x_gen = x_gen @ proj_x.T
     theta_gen = x_gen.detach().cpu().numpy()
     # scale back
     theta_gen = (theta_gen * std[:, :x_dim] + mean[:, :x_dim] + 10.0).squeeze()
@@ -28,6 +33,7 @@ def generate_theta(generator, x_cond, mean, std, x_dim, tol, num_samps):
 
 def get_rank_statistic(
     generator: nn.Module,
+    Vx,
     trn_mean,
     trn_std,
     tol,
@@ -59,7 +65,7 @@ def get_rank_statistic(
     all_samples = []
     for k, (tho, xo) in enumerate(zip(thos.squeeze(), xos.squeeze())):
         xo_processed = process_test_data(xo.reshape(-1, 1), trn_mean, trn_std, Vs, ndim)
-        samples = generate_theta(generator, xo_processed, trn_mean, trn_std, ndim, tol, num_samples)
+        samples = generate_theta(generator, xo_processed, trn_mean, trn_std, ndim, tol, num_samples, proj_x=Vx)
         samples = torch.FloatTensor(samples)
         all_samples.append(samples.unsqueeze(0))
         # Calculate rank under Gaussian.

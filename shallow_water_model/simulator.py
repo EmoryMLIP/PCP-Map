@@ -9,6 +9,7 @@ from typing import Optional, Tuple
 import numpy as np
 from scipy.fft import fft2
 
+# TODO change to correct paths
 path_to_fcode = '.../PCP-Map/shallow_water_model/shallow_water01_modified.f90'
 
 

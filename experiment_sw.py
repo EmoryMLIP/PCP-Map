@@ -2,6 +2,7 @@ import os
 import numpy as np
 import pandas as pd
 
+# TODO change to correct paths
 loss = pd.read_csv('.../PCP-Map/experiments/tabcond/sw_valid_hist.csv').to_numpy()
 param = pd.read_csv('.../PCP-Map/experiments/tabcond/sw_params_hist.csv').to_numpy()
 loss_param = np.concatenate((param[:, 1:], loss[:, 1:]), axis=1)
@@ -18,5 +19,6 @@ num_layers = int(param_list[4])
 os.system(
     "python train_cond.py --data 'sw' --valid_freq 70 --early_stopping 20  --input_x_dim 100 --input_y_dim 3500\
      --num_layers_pi " + str(num_layers) + " --feature_dim " + str(width) + " --feature_y_dim " + str(width_y) +
-    " --batch_size " + str(batch_size) + " --lr " + str(lr) + " --tol 1e-9 --save_test 1 --save 'experiments/tabcond/sw'"
+    " --batch_size " + str(batch_size) + " --lr " + str(lr) + " --theta_pca 1 --tol 1e-9 --save_test 1 \
+    --save 'experiments/tabcond/sw'"
 )

@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 
+# TODO change to correct paths
 
 def get_wt_wine():
     """

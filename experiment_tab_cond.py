@@ -2,6 +2,7 @@ import os
 import numpy as np
 import pandas as pd
 
+# TODO change to correct paths
 loss_con = pd.read_csv('.../PCP-Map/experiments/tabcond/concrete_valid_hist.csv').to_numpy()
 loss_enr = pd.read_csv('.../PCP-Map/experiments/tabcond/energy_valid_hist.csv').to_numpy()
 loss_yat = pd.read_csv('.../PCP-Map/experiments/tabcond/yacht_valid_hist.csv').to_numpy()

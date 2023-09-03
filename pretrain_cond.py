@@ -35,6 +35,7 @@ parser.add_argument('--random_state',   type=int, default=42, help="random state
 parser.add_argument('--num_epochs',     type=int, default=15, help="pilot run number of epochs")
 parser.add_argument('--num_trials',     type=int, default=100, help="pilot run number of trials")
 
+parser.add_argument('--theta_pca',      type=int, default=0, help="project theta in for shallow water")
 parser.add_argument('--save',           type=str, default='experiments/tabcond', help="define the save directory")
 
 args = parser.parse_args()
@@ -110,6 +111,8 @@ if __name__ == '__main__':
         batch_size_list = np.array([32, 64])
     if args.data == 'sw':
         lr_list = np.array([0.0001])
+        if bool(args.theta_pca) is True:
+            lr_list = np.array([0.01, 0.001, 0.0001])
     else:
         lr_list = np.array([0.01, 0.005, 0.001])
 
@@ -118,6 +121,13 @@ if __name__ == '__main__':
         batch_size = int(np.random.choice(batch_size_list))
         if args.data == 'sw':
             _, train_loader, valid_data, _ = load_swdata(batch_size)
+            if bool(args.theta_pca) is True:
+                x_full = train_loader.dataset[:, :100]
+                x_full = x_full.view(-1, 100)
+                cov_x = x_full.T @ x_full
+                L, V = torch.linalg.eigh(cov_x)
+                # get the last dx columns in V
+                Vx = V[:, -14:].to(device)
         else:
             train_loader, valid_loader, _ = load_data(args.data, args.test_ratio, args.valid_ratio,
                                                       batch_size, args.random_state)
@@ -141,10 +151,13 @@ if __name__ == '__main__':
         lr = np.random.choice(lr_list)
 
         # Multivariate Gaussian as Reference
-        prior_picnn = distributions.MultivariateNormal(torch.zeros(args.input_x_dim).to(device),
-                                                       torch.eye(args.input_x_dim).to(device))
+        input_x_dim = args.input_x_dim
+        if bool(args.theta_pca) is True:
+            input_x_dim = 14
+        prior_picnn = distributions.MultivariateNormal(torch.zeros(input_x_dim).to(device),
+                                                       torch.eye(input_x_dim).to(device))
         # build PCP-Map
-        picnn = PICNN(args.input_x_dim, args.input_y_dim, width, width_y, args.out_dim, num_layers, reparam=reparam)
+        picnn = PICNN(input_x_dim, args.input_y_dim, width, width_y, args.out_dim, num_layers, reparam=reparam)
         pcpmap = PCPMap(prior_picnn, picnn).to(device)
         optimizer = torch.optim.Adam(pcpmap.parameters(), lr=lr)
 
@@ -161,6 +174,8 @@ if __name__ == '__main__':
             for sample in train_loader:
                 if args.data == 'lv' or args.data == 'sw':
                     x = sample[:, :args.input_x_dim].requires_grad_(True).to(device)
+                    if bool(args.theta_pca) is True:
+                        x = x @ Vx
                     y = sample[:, args.input_x_dim:].requires_grad_(True).to(device)
                 else:
                     x = sample[:, args.input_y_dim:].requires_grad_(True).to(device)
@@ -182,6 +197,8 @@ if __name__ == '__main__':
 
         if args.data == 'sw':
             x_valid = valid_data[:, :args.input_x_dim].requires_grad_(True).to(device)
+            if bool(args.theta_pca) is True:
+                x_valid = x_valid @ Vx
             y_valid = valid_data[:, args.input_x_dim:].requires_grad_(True).to(device)
             val_loss_picnn = -pcpmap.loglik_picnn(x_valid, y_valid).mean()
             val_loss_picnn = val_loss_picnn.cpu().detach().numpy()

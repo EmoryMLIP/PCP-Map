@@ -12,7 +12,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 def create_data_swe(num_eigs, save=True):
 
     """Obtain Data"""
-    # TODO change to local directory
+    # TODO change to correct path
     path_to_sims = '.../PCP-Map/datasets/shallow_water_data/'
     #  list all files whose names start with 'data_' and end in 'npz'
     files = sorted(f for f in listdir(path_to_sims) if f.startswith('data_') and f.endswith('.npz'))

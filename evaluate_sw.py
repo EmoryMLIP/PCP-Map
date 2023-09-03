@@ -71,8 +71,10 @@ def process_test_data(obs, proj, mean, std, x_dim):
     return x_star_proj_norm
 
 
-def generate_theta(generator, x_cond, mean, std, x_dim, tol, num_samples=100):
+def generate_theta(generator, x_cond, mean, std, x_dim, tol, proj_x=None, num_samples=100):
     zx = torch.randn(num_samples, x_dim).to(device)
+    if proj_x is not None:
+        zx = torch.randn(num_samples, 14).to(device)
     x_cond_tensor = torch.tensor(x_cond, dtype=torch.float32)
     # start sampling timer
     start = time.time()
@@ -81,9 +83,11 @@ def generate_theta(generator, x_cond, mean, std, x_dim, tol, num_samples=100):
     sample_time = time.time() - start
     print(f"Sampling Time for theta: {sample_time}")
     print(f"Number of closure calls: {num_evals}")
+    if proj_x is not None:
+        x_gen = x_gen @ proj_x.T
     theta_gen = x_gen.detach().cpu().numpy()
     # scale back
-    theta_gen = (theta_gen * std[:, :x_dim] + mean[:, :x_dim] + 10.0).squeeze()
+    theta_gen = (theta_gen * std[:, :100] + mean[:, :100] + 10.0).squeeze()
     return theta_gen
 
 
@@ -148,7 +152,7 @@ def load_data_info(file_path, valid_ratio):
     trn, vld = train_test_split(data, test_size=valid_ratio, random_state=42)
     mean = np.mean(trn, axis=0, keepdims=True)
     std = np.std(trn, axis=0, keepdims=True)
-    return data, V, mean, std
+    return data, trn, V, mean, std
 
 
 if __name__ == '__main__':
@@ -169,14 +173,28 @@ if __name__ == '__main__':
     pcpmap20k = build_pcpmap(checkpt_20k, prior_picnn)
 
     """Grab Training Mean and STD"""
-
+    # TODO change to correct paths
     file_path = '.../PCP-Map/datasets/shallow_water_data3500.npz'
     file_path50k = '.../PCP-Map/datasets/shallow_water_data3500_50k.npz'
     file_path20k = '.../PCP-Map/datasets/shallow_water_data3500_20k.npz'
 
-    dataset, Vs, train_mean, train_std = load_data_info(file_path, 0.001)
-    _, Vs50k, train_mean_50k, train_std_50k = load_data_info(file_path50k, 0.002)
-    _, Vs20k, train_mean_20k, train_std_20k = load_data_info(file_path20k, 0.005)
+    dataset, train_data, Vs, train_mean, train_std = load_data_info(file_path, 0.001)
+    _, Vs50k, train_data50k, train_mean_50k, train_std_50k = load_data_info(file_path50k, 0.002)
+    _, Vs20k, train_data20k, train_mean_20k, train_std_20k = load_data_info(file_path20k, 0.005)
+    if bool(checkpt['args'].theta_pca) is True:
+        x_full = torch.FloatTensor(train_data[:, :100])
+        x_full_50k = torch.FloatTensor(train_data50k[:, :100])
+        x_full_20k = torch.FloatTensor(train_data20k[:, :100])
+        cov_x = x_full.T @ x_full
+        cov_x_50k = x_full_50k.T @ x_full_50k
+        cov_x_20k = x_full_20k.T @ x_full_20k
+        L, V = torch.linalg.eigh(cov_x)
+        L50k, V50k = torch.linalg.eigh(cov_x_50k)
+        L20k, V20k = torch.linalg.eigh(cov_x_20k)
+        # get the last dx columns in V
+        Vx = V[:, -14:].to(device)
+        Vx50k = V50k[:, -14:].to(device)
+        Vx20k = V20k[:, -14:].to(device)
 
     """Preparing Plotting Data"""
 
@@ -199,7 +217,8 @@ if __name__ == '__main__':
 
     # generate theta from PCP-Map
     x_star_processed = process_test_data(x_star_fourier, Vs, train_mean, train_std, input_x_dim)
-    theta_samples = generate_theta(pcpmap, x_star_processed, train_mean, train_std, input_x_dim, checkpt['args'].tol)
+    theta_samples = generate_theta(pcpmap, x_star_processed, train_mean, train_std, input_x_dim, checkpt['args'].tol,
+                                   proj_x=Vx)
 
     """Ground Truth Plotting"""
 
@@ -280,7 +299,7 @@ if __name__ == '__main__':
     """Perform SBC Analysis"""
 
     path_to_samps = '.../PCP-Map/datasets/sw_test_data.npz'
-    ranks, _ = get_rank_statistic(pcpmap, train_mean, train_std, checkpt['args'].tol, path_to_samps)
+    ranks, _ = get_rank_statistic(pcpmap, Vx, train_mean, train_std, checkpt['args'].tol, path_to_samps)
 
     # plot ranks
     ndim, N = ranks.shape
@@ -337,9 +356,11 @@ if __name__ == '__main__':
 
     # sample from posterior
     x_star_processed50k = process_test_data(x_star_fourier, Vs50k, train_mean_50k, train_std_50k, input_x_dim)
-    theta_samples50k = generate_theta(pcpmap50k, x_star_processed50k, train_mean_50k, train_std_50k, input_x_dim, checkpt_50k['args'].tol)
+    theta_samples50k = generate_theta(pcpmap50k, x_star_processed50k, train_mean_50k, train_std_50k, input_x_dim,
+                                      checkpt_50k['args'].tol, proj_x=Vx50k)
     x_star_processed20k = process_test_data(x_star_fourier, Vs20k, train_mean_20k, train_std_20k, input_x_dim)
-    theta_samples20k = generate_theta(pcpmap20k, x_star_processed20k, train_mean_20k, train_std_20k, input_x_dim, checkpt_20k['args'].tol)
+    theta_samples20k = generate_theta(pcpmap20k, x_star_processed20k, train_mean_20k, train_std_20k, input_x_dim,
+                                      checkpt_20k['args'].tol, proj_x=Vx20k)
 
     # grab mean and std
     mean100k = np.mean(theta_samples, axis=0, keepdims=True).squeeze()

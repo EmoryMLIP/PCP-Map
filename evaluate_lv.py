@@ -172,17 +172,18 @@ if __name__ == '__main__':
     train_mean = np.mean(train, axis=0, keepdims=True)
     train_std = np.std(train, axis=0, keepdims=True)
 
+    # TODO change to correct paths
     StochLV = StochasticLotkaVolterra()
-    path_theta1 = '.../PCP-Map/experiments/tabcond/lv/StochasticLV_ABCsamples2k.pk'
+    path_theta1 = '.../PCP-Map/experiments/tabcond/lv/StochasticLV_ABCsamples01.pk'
     theta1 = np.array([0.01, 0.5, 1, 0.01])
     experiment(StochLV, path_theta1, theta1, pcpmap, train_mean, train_std, checkpt)
 
-    path_theta2 = '.../PCP-Map/experiments/tabcond/lv/StochasticLV_ABCsamplesNewTheta.pk'
+    path_theta2 = '.../PCP-Map/experiments/tabcond/lv/StochasticLV_ABCsamples015NewTheta.pk'
     theta2 = np.array([0.02, 0.02, 0.02, 0.02])
     experiment(StochLV, path_theta2, theta2, pcpmap, train_mean, train_std, checkpt)
 
     """Density Estimation"""
-
+    # TODO change to correct path
     test_dataset_load = scipy.io.loadmat('.../PCPM/datasets/lv_test_data.mat')
     test_dat = test_dataset_load['test_data']
     # log transformation over theta
