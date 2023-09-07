@@ -18,7 +18,7 @@ from lib.utils import count_parameters, makedirs, get_logger, AverageMeter
 argument parser for hyper parameters and model handling
 """
 
-parser = argparse.ArgumentParser('PCPM')
+parser = argparse.ArgumentParser('PCP-Map')
 parser.add_argument(
     '--data', choices=['wt_wine', 'rd_wine', 'parkinson'], type=str, default='rd_wine'
 )
@@ -151,7 +151,7 @@ def evaluate_model(ficnn_model, picnn_model, data, batch_size, test_ratio, valid
 
 
 """
-Training
+Training Process
 """
 
 if __name__ == '__main__':
@@ -159,6 +159,8 @@ if __name__ == '__main__':
     # load data
     train_loader, valid_loader, _, train_size = dataloader(args.data, args.batch_size, args.test_ratio,
                                                            args.valid_ratio, args.random_state)
+
+    """Construct Model"""
 
     if args.clip is True:
         reparam = False
@@ -182,6 +184,8 @@ if __name__ == '__main__':
     optimizer1 = torch.optim.Adam(map_ficnn.parameters(), lr=args.lr)
     optimizer2 = torch.optim.Adam(map_picnn.parameters(), lr=args.lr)
 
+    """Initial Logs"""
+
     strTitle = args.data + '_' + sStartTime + '_' + str(args.batch_size) + '_' + str(args.lr) + \
             '_' + str(args.num_layers_fi) + '_' + str(args.feature_dim)
 
@@ -202,7 +206,8 @@ if __name__ == '__main__':
 
     logger.info(["iter"] + columns_train)
 
-    # training starts
+    """Training Starts"""
+
     itr = 1
     total_itr = (int(train_size / args.batch_size) + 1) * args.num_epochs
     best_loss_ficnn = float('inf')

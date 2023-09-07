@@ -3,8 +3,8 @@ from src.ABC import Rejection_ABC, SMC_ABC
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.stats as st
-# plt.rc('text', usetex=True)
-# plt.rc('font', size=12)
+plt.rc('text', usetex=True)
+plt.rc('font', size=12)
 import pickle
 import scipy.io as sio
 
@@ -21,7 +21,7 @@ xtrue = np.array([0.01, 0.5, 1.0, 0.01])
 ytrue = LV.sample_data(xtrue)
 
 # define reference mean and standard deviation
-data = sio.loadmat('/ABC/training_data.mat')
+data = sio.loadmat('.../PCP-Map/datasets/lv_data.mat')
 ref_mean = np.mean(data['y_train'], axis=0)
 ref_std = np.std(data['y_train'], axis=0)
 

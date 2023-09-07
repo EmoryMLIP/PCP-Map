@@ -67,7 +67,7 @@ def load_swdata(batch_size):
     # Split, Normalize
     train, valid = train_test_split(
         dataset,
-        test_size=0.001,
+        test_size=0.05,
         random_state=42
     )
     train_mean = np.mean(train, axis=0, keepdims=True)

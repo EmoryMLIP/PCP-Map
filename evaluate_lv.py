@@ -158,7 +158,7 @@ if __name__ == '__main__':
 
     """Testing"""
 
-    dataset_load = scipy.io.loadmat('.../PCP-Map/datasets/training_data.mat')
+    dataset_load = scipy.io.loadmat('.../PCP-Map/datasets/lv_data.mat')
     x_train = dataset_load['x_train']
     y_train = dataset_load['y_train']
     dat = np.concatenate((x_train, y_train), axis=1)
@@ -184,7 +184,7 @@ if __name__ == '__main__':
 
     """Density Estimation"""
     # TODO change to correct path
-    test_dataset_load = scipy.io.loadmat('.../PCPM/datasets/lv_test_data.mat')
+    test_dataset_load = scipy.io.loadmat('.../PCP-Map/datasets/lv_test_data.mat')
     test_dat = test_dataset_load['test_data']
     # log transformation over theta
     test_dat[:, :4] = np.log(test_dat[:, :4])

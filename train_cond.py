@@ -48,7 +48,7 @@ parser.add_argument('--random_state',   type=int, default=42, help="random state
 
 parser.add_argument('--save_test',      type=int, default=1, help="if 1 then saves test numerics 0 if not")
 parser.add_argument('--save',           type=str, default='experiments/cond', help="define the save directory")
-parser.add_argument('--theta_pca',      type=int, default=0, help="project theta in for shallow water")
+parser.add_argument('--theta_pca',      type=int, default=1, help="project theta in for shallow water")
 
 args = parser.parse_args()
 
@@ -85,7 +85,8 @@ def update_lr_picnn(optimizer, n_vals_without_improvement):
 def load_data(data, test_ratio, valid_ratio, batch_size, random_state):
 
     if data == 'lv':
-        dataset_load = scipy.io.loadmat('.../PCP-Map/datasets/training_data.mat')
+        # TODO change to correct path
+        dataset_load = scipy.io.loadmat('.../PCP-Map/datasets/lv_data.mat')
         x_train = dataset_load['x_train']
         y_train = dataset_load['y_train']
         dataset = np.concatenate((x_train, y_train), axis=1)
@@ -145,12 +146,13 @@ def evaluate_model(model, data, batch_size, test_ratio, valid_ratio, random_stat
 
 
 """
-Training
+Training Process
 """
 
 if __name__ == '__main__':
 
-    # load data
+    """Load Data"""
+
     if args.data == 'sw':
         _, train_loader, valid_data, n_train = load_swdata(args.batch_size)
         if bool(args.theta_pca) is True:
@@ -164,6 +166,8 @@ if __name__ == '__main__':
         train_loader, valid_loader, n_train = load_data(args.data, args.test_ratio, args.valid_ratio,
                                                         args.batch_size, args.random_state)
 
+    """Construct Model"""
+
     if args.clip is True:
         reparam = False
     else:
@@ -171,19 +175,17 @@ if __name__ == '__main__':
 
     # Multivariate Gaussian as Reference
     input_x_dim = args.input_x_dim
-    if bool(args.theta_pca) is True:
+    if args.data == 'sw' and bool(args.theta_pca) is True:
         input_x_dim = 14
     prior_picnn = distributions.MultivariateNormal(torch.zeros(input_x_dim).to(device), torch.eye(input_x_dim).to(device))
-    # prior_picnn = distributions.MultivariateNormal(torch.zeros(args.input_x_dim).to(device),
-    #                                                torch.eye(args.input_x_dim).to(device))
     # build PCP-Map
     picnn = PICNN(input_x_dim, args.input_y_dim, args.feature_dim, args.feature_y_dim,
                   args.out_dim, args.num_layers_pi, reparam=reparam)
-    # picnn = PICNN(args.input_x_dim, args.input_y_dim, args.feature_dim, args.feature_y_dim,
-    #               args.out_dim, args.num_layers_pi, reparam=reparam)
     pcpmap = PCPMap(prior_picnn, picnn).to(device)
 
     optimizer = torch.optim.Adam(pcpmap.parameters(), lr=args.lr)
+
+    """Initial Logs"""
 
     strTitle = args.data + '_' + sStartTime + '_' + str(args.batch_size) + '_' + str(args.lr) + \
                '_' + str(args.num_layers_pi) + '_' + str(args.feature_dim)
@@ -203,6 +205,8 @@ if __name__ == '__main__':
     valid_hist = pd.DataFrame(columns=columns_valid)
 
     logger.info(["iter"] + columns_train)
+
+    """Training Starts"""
 
     # starts training
     itr = 1
