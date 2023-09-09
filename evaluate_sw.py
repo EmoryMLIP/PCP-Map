@@ -130,6 +130,8 @@ def plot_prior_predictives(axis, t, x_cond_wonoise, priors, y_lab=True, num_samp
 
 def build_pcpmap(check_point, prior):
     input_x_dim = check_point['args'].input_x_dim
+    if bool(check_point['args'].theta_pca) is True:
+        input_x_dim = 14
     input_y_dim = check_point['args'].input_y_dim
     feature_dim = check_point['args'].feature_dim
     feature_y_dim = check_point['args'].feature_y_dim
@@ -143,7 +145,7 @@ def build_pcpmap(check_point, prior):
     picnn = PICNN(input_x_dim, input_y_dim, feature_dim, feature_y_dim, out_dim, num_layers_pi, reparam=reparam)
     pcpmap = PCPMap(prior, picnn)
     pcpmap.load_state_dict(check_point["state_dict_picnn"])
-    return pcpmap.to(device)
+    return pcpmap
 
 
 def load_data_info(file_path, valid_ratio):
@@ -167,10 +169,15 @@ if __name__ == '__main__':
     checkpt_20k = torch.load(args.resume20k, map_location=lambda storage, loc: storage)
     # build maps
     input_x_dim = checkpt['args'].input_x_dim
+    if bool(checkpt['args'].theta_pca) is True:
+        input_x_dim = 14
     prior_picnn = distributions.MultivariateNormal(torch.zeros(input_x_dim).to(device), torch.eye(input_x_dim).to(device))
     pcpmap = build_pcpmap(checkpt, prior_picnn)
     pcpmap50k = build_pcpmap(checkpt_50k, prior_picnn)
     pcpmap20k = build_pcpmap(checkpt_20k, prior_picnn)
+    pcpmap.to(device)
+    pcpmap50k.to(device)
+    pcpmap20k.to(device)
 
     """Grab Training Mean and STD"""
     # TODO change to correct paths
@@ -178,9 +185,9 @@ if __name__ == '__main__':
     file_path50k = '.../PCP-Map/datasets/shallow_water_data3500_50k.npz'
     file_path20k = '.../PCP-Map/datasets/shallow_water_data3500_20k.npz'
 
-    dataset, train_data, Vs, train_mean, train_std = load_data_info(file_path, 0.001)
-    _, Vs50k, train_data50k, train_mean_50k, train_std_50k = load_data_info(file_path50k, 0.002)
-    _, Vs20k, train_data20k, train_mean_20k, train_std_20k = load_data_info(file_path20k, 0.005)
+    dataset, train_data, Vs, train_mean, train_std = load_data_info(file_path, 0.05)
+    _, train_data50k, Vs50k, train_mean_50k, train_std_50k = load_data_info(file_path50k, 0.05)
+    _, train_data20k, Vs20k, train_mean_20k, train_std_20k = load_data_info(file_path20k, 0.05)
     if bool(checkpt['args'].theta_pca) is True:
         x_full = torch.FloatTensor(train_data[:, :100])
         x_full_50k = torch.FloatTensor(train_data50k[:, :100])
@@ -381,21 +388,21 @@ if __name__ == '__main__':
     fig.set_size_inches(28, 8)
 
     xx = np.linspace(1, 100, 100)
-    axs[0].plot(xx, theta_star, c='k', label="Ground Truth")
+    axs[0].plot(xx, theta_star.squeeze(), c='k', label="Ground Truth")
     axs[0].plot(xx, mean20k, c='g', label="Posterior Mean 20k")
     axs[0].fill_between(xx, (mean20k - std20k), (mean20k + std20k), color='grey', alpha=0.2)
     axs[0].set_ylabel('Depth', fontsize=26)
     axs[0].text(10, 5, f"rel. error = {err_20k:.2f}", fontsize=20, **font)
     axs[0].legend(fontsize="16")
 
-    axs[1].plot(xx, theta_star, c='k', label="Ground Truth")
+    axs[1].plot(xx, theta_star.squeeze(), c='k', label="Ground Truth")
     axs[1].plot(xx, mean50k, c='b', label="Posterior Mean 50k")
     axs[1].fill_between(xx, (mean50k - std50k), (mean50k + std50k), color='grey', alpha=0.2)
     axs[1].set_xlabel('Position', fontsize=26)
     axs[1].text(10, 5.35, f"rel. error = {err_50k:.2f}", fontsize=20, **font)
     axs[1].legend(fontsize="16")
 
-    axs[2].plot(xx, theta_star, c='k', label="Ground Truth")
+    axs[2].plot(xx, theta_star.squeeze(), c='k', label="Ground Truth")
     axs[2].plot(xx, mean100k, c='r', label="Posterior Mean 100k")
     axs[2].fill_between(xx, (mean100k - std100k), (mean100k + std100k), color='grey', alpha=0.2)
     axs[2].text(10, 6.45, f"rel. error = {err_100k:.2f}", fontsize=20, **font)
