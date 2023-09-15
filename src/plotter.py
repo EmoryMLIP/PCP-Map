@@ -77,7 +77,7 @@ def plot4_tabular(dataset, z_gen, sample_gen, sPath, sTitle="", hidevals=True):
     plt.close()
 
 
-def plot_matrix(x_samps, limits, xtrue=None, symbols=None):
+def plot_matrix(x_samps, limits, xtrue=None, xmap=None, symbols=None):
     dim = x_samps.shape[1]
     plt.figure(figsize=(9, 9))
     for i in range(dim):
@@ -86,7 +86,9 @@ def plot_matrix(x_samps, limits, xtrue=None, symbols=None):
             if i == j:
                 plt.hist(x_samps[:, i], bins=40, density=True)
                 if xtrue is not None:
-                    plt.axvline(xtrue[i], color='r', linewidth=3)
+                    plt.axvline(xtrue[i], color='r', linewidth=2)
+                if xmap is not None:
+                    plt.axvline(xmap[i], color='k', linewidth=2)
                 plt.xlim(limits[i])
                 if i != 0:
                     ax.set_yticklabels([])
@@ -95,7 +97,9 @@ def plot_matrix(x_samps, limits, xtrue=None, symbols=None):
             else:
                 plt.plot(x_samps[:, j], x_samps[:, i], '.k', markersize=.04, alpha=0.1)
                 if xtrue is not None:
-                    plt.plot(xtrue[j], xtrue[i], '.r', markersize=8, label='Truth')
+                    plt.plot(xtrue[j], xtrue[i], '.r', markersize=7, label='Truth')
+                if xmap is not None:
+                    plt.plot(xmap[j], xmap[i], 'xk', markersize=7, label='Truth')
                 if i < 3:
                     ax.set_xticklabels([])
                 if j == 1 or j == 2:

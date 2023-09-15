@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 from lib.utils import AverageMeter
 
 parser = argparse.ArgumentParser('PCP-Map')
-parser.add_argument('--resume',    type=str, default="/experiments/tabcond/lv/...")
+parser.add_argument('--resume', type=str, default="/experiments/tabcond/lv/...")
 
 args = parser.parse_args()
 
@@ -24,11 +24,28 @@ args = parser.parse_args()
 def experiment(LV, abc_dat_path, theta_star, model, trn_mean, trn_std, checkpt):
 
     """grab y star from ABC"""
+
     input_x_dim = checkpt['args'].input_x_dim
     abc_sample = pd.read_pickle(abc_dat_path)
     y_theta_star = abc_sample["y_true"]
     y_theta_star_norm = (y_theta_star - trn_mean[:, input_x_dim:]) / trn_std[:, input_x_dim:]
     y_theta_star_norm_tensor = torch.tensor(y_theta_star_norm, dtype=torch.float32)
+
+    """MAP estimation"""
+
+    theta0 = torch.randn(1, 4, requires_grad=True).to(device)
+    theta_min = theta0.clone().detach().requires_grad_(True)
+    y_cond = y_theta_star_norm_tensor.to(device)
+
+    def closure():
+        loss = -model.loglik_picnn(theta_min, y_cond)
+        theta_min.grad = torch.autograd.grad(loss, theta_min)[0].detach()
+        return loss
+
+    optimizer = torch.optim.LBFGS([theta_min], line_search_fn="strong_wolfe", max_iter=1000000)
+    optimizer.step(closure)
+    theta_map = theta_min.detach().cpu().numpy()
+    theta_map = theta_map * train_std[:, :4] + train_mean[:, :4]
 
     """generate samples"""
 
@@ -40,7 +57,7 @@ def experiment(LV, abc_dat_path, theta_star, model, trn_mean, trn_std, checkpt):
     sample_time = time.time() - start
     print(f"Sampling Time for theta {theta_star[0].item()}, tol={checkpt['args'].tol}: {sample_time}")
     print(f"Number of closure calls for theta {theta_star[0].item()}, tol={checkpt['args'].tol}: {num_evals}")
-    print("Number of closure calls: " + str(num_evals))
+    x_gen = x_gen.detach().to(device)
     theta_gen = x_gen.detach().cpu().numpy()
     theta_gen = (theta_gen * trn_std[:, :input_x_dim] + trn_mean[:, :input_x_dim]).squeeze()
 
@@ -54,7 +71,6 @@ def experiment(LV, abc_dat_path, theta_star, model, trn_mean, trn_std, checkpt):
         # end timer
         sample_time_tol = time.time() - start_tol
         print("Sampling Time for tol=" + str(tol) + " is: " + str(sample_time_tol))
-        print("Number of closure calls for tol= " + str(tol) + " is: " + str(num_evals_tol))
         x_gen_tol = x_gen_tol.detach().to(device)
         theta_gen_tol = x_gen_tol.detach().cpu().numpy()
         theta_gen_tol = (theta_gen_tol * trn_std[:, :input_x_dim] + trn_mean[:, :input_x_dim]).squeeze()
@@ -62,19 +78,20 @@ def experiment(LV, abc_dat_path, theta_star, model, trn_mean, trn_std, checkpt):
         error = np.linalg.norm(theta_gen - theta_gen_tol) / np.linalg.norm(theta_gen)
         print(f"Norm Error for theta {theta_star[0].item()} tol={tol}: {error}")
 
-    """plot"""
+    """plot MAP point and posterior samples"""
 
     theta_star_log = np.log(theta_star)
     symbols = [r'$\theta_1$', r'$\theta_2$', r'$\theta_3$', r'$\theta_4$']
     log_limits = [[-5., 2.], [-5., 2.], [-5., 2.], [-5., 2.]]
-    plot_matrix(theta_gen, log_limits, xtrue=theta_star_log, symbols=symbols)
+    plot_matrix(theta_gen, log_limits, xtrue=theta_star_log, xmap=theta_map.squeeze(), symbols=symbols)
     sPath = os.path.join(checkpt['args'].save, 'figs', checkpt['args'].data + '_' + str(theta_star[0].item()) + '.png')
     if not os.path.exists(os.path.dirname(sPath)):
         os.makedirs(os.path.dirname(sPath))
     plt.savefig(sPath, dpi=300)
     plt.close()
 
-    # plot for ABC
+    """plot for ABC"""
+
     theta_abc = np.array(abc_sample['all_x'])[-1]
     theta_abc = theta_abc.reshape(-1, 4)
     theta_abc = np.log(theta_abc)
@@ -108,7 +125,8 @@ def experiment(LV, abc_dat_path, theta_star, model, trn_mean, trn_std, checkpt):
     plt.savefig(sPath, dpi=300)
     plt.close()
 
-    # plot ABC posterior predictive
+    """plot ABC posterior predictive"""
+
     plt.figure()
     ytrue = LV.simulate(theta_star)
     c1 = plt.plot(LV.tt, ytrue[:, 0], '-', label='Predators')
@@ -133,7 +151,7 @@ def experiment(LV, abc_dat_path, theta_star, model, trn_mean, trn_std, checkpt):
 
 if __name__ == '__main__':
 
-    """Load Saved Model"""
+    """Load Best Model"""
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     checkpt = torch.load(args.resume, map_location=lambda storage, loc: storage)
@@ -156,7 +174,7 @@ if __name__ == '__main__':
     pcpmap.load_state_dict(checkpt["state_dict_picnn"])
     pcpmap = pcpmap.to(device)
 
-    """Testing"""
+    """Test Generated Sample"""
 
     dataset_load = scipy.io.loadmat('.../PCP-Map/datasets/lv_data.mat')
     x_train = dataset_load['x_train']
@@ -204,4 +222,4 @@ if __name__ == '__main__':
         tsttimeMeter.update(tststep_time)
         tstLossMeter.update(test_loss.item(), xy.shape[0])
     print("Test NLL: " + str(tstLossMeter.avg))
-    print("Test time: " + str(tsttimeMeter.sum))
+    print("Test Time: " + str(tsttimeMeter.sum))

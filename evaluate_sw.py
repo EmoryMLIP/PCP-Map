@@ -63,7 +63,7 @@ def wave_wout_noise(theta):
     return z[1:, :]
 
 
-def process_test_data(obs, proj, mean, std, x_dim):
+def process_test_data(obs, proj, mean, std, x_dim=100):
     # project observation
     x_star_proj = proj.T @ obs
     # normalize
@@ -71,8 +71,8 @@ def process_test_data(obs, proj, mean, std, x_dim):
     return x_star_proj_norm
 
 
-def generate_theta(generator, x_cond, mean, std, x_dim, tol, proj_x=None, num_samples=100):
-    zx = torch.randn(num_samples, x_dim).to(device)
+def generate_theta(generator, x_cond, mean, std, tol, proj_x=None, num_samples=100):
+    zx = torch.randn(num_samples, 100).to(device)
     if proj_x is not None:
         zx = torch.randn(num_samples, 14).to(device)
     x_cond_tensor = torch.tensor(x_cond, dtype=torch.float32)
@@ -91,7 +91,7 @@ def generate_theta(generator, x_cond, mean, std, x_dim, tol, proj_x=None, num_sa
     return theta_gen
 
 
-def plot_post_predict(axis, t, x_cond_wonoise, theta, y_lab=True, num_samples=50):
+def plot_post_predict(axis, t, x_cond_wonoise, theta, color, y_lab=True, num_samples=50):
     x_axs = np.linspace(1, 100, 100)
     # plot ground truth at time t
     axis.plot(x_axs, x_cond_wonoise[t, :], c='k')
@@ -103,13 +103,13 @@ def plot_post_predict(axis, t, x_cond_wonoise, theta, y_lab=True, num_samples=50
         # run forward model
         sim = wave_wout_noise(theta_i)
         # plot simulated wave at time t
-        axis.plot(x_axs, sim[t, :], c='r', lw=0.2)
+        axis.plot(x_axs, sim[t, :], c=color, lw=0.2)
     axis.set_xticks([])
     if y_lab is True:
-        axis.set_ylabel("Amplitude", rotation=90, fontsize=24)
+        axis.set_ylabel("Amplitude", rotation=90, fontsize=30)
 
 
-def plot_prior_predictives(axis, t, x_cond_wonoise, priors, y_lab=True, num_samples=50):
+def plot_prior_predictives(axis, t, x_cond_wonoise, priors, color, y_lab=True, num_samples=50):
     x_axs = np.linspace(1, 100, 100)
     # plot ground truth at time t
     axis.plot(x_axs, x_cond_wonoise[t, :], c='k')
@@ -121,11 +121,11 @@ def plot_prior_predictives(axis, t, x_cond_wonoise, priors, y_lab=True, num_samp
         # run forward model
         sim = wave_wout_noise(priors_i)
         # plot simulated wave at time t
-        axis.plot(x_axs, sim[t, :], c='grey', lw=0.3)
+        axis.plot(x_axs, sim[t, :], c=color, lw=0.3)
     axis.set_xticks([])
     if y_lab is True:
-        axis.set_ylabel("Amplitude", rotation=90, fontsize=24)
-    axis.text(0.1, 0.9, f"t = {t+1}", transform=axis.transAxes, fontsize=20)
+        axis.set_ylabel("Amplitude", rotation=90, fontsize=30)
+    axis.text(0.1, 0.9, f"t = {t + 1}", transform=axis.transAxes, fontsize=30)
 
 
 def build_pcpmap(check_point, prior):
@@ -162,6 +162,8 @@ if __name__ == '__main__':
     """Set up PCP-Maps"""
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    color_list = ['r', 'b', 'salmon']
+    time_list = [21, 68, 93]
 
     # load checkpoints
     checkpt = torch.load(args.resume, map_location=lambda storage, loc: storage)
@@ -223,9 +225,8 @@ if __name__ == '__main__':
     scipy.io.savemat(file_name, {'theta_gt': theta_star, 'x_gt': x_star_fourier, 'wave_gt': x_star_nofourier_nonosie})
 
     # generate theta from PCP-Map
-    x_star_processed = process_test_data(x_star_fourier, Vs, train_mean, train_std, input_x_dim)
-    theta_samples = generate_theta(pcpmap, x_star_processed, train_mean, train_std, input_x_dim, checkpt['args'].tol,
-                                   proj_x=Vx)
+    x_star_processed = process_test_data(x_star_fourier, Vs, train_mean, train_std)
+    theta_samples = generate_theta(pcpmap, x_star_processed, train_mean, train_std, checkpt['args'].tol, proj_x=Vx)
 
     """Ground Truth Plotting"""
 
@@ -235,28 +236,31 @@ if __name__ == '__main__':
 
     # plot prior samples with ground truth theta
     xx = np.linspace(1, 100, 100)
-    axs[0].plot(xx, theta_star.squeeze(0), c='k')
+    axs[0].set_ylim(bottom=4.0, top=18.0)
+    axs[0].plot(xx, theta_star.squeeze(0), c='k', linewidth=2)
     for i in range(theta_samples.shape[0]):
         rand_sample = np.random.randint(low=0, high=dataset.shape[0], size=(1,))[0]
-        prior_theta_i = dataset[rand_sample, :input_x_dim] + 10.0
+        prior_theta_i = dataset[rand_sample, :100] + 10.0
         axs[0].plot(xx, prior_theta_i, c='grey', lw=0.3)
     axs[0].set_xticks([])
-    axs[0].set_ylabel("Depth Profile", rotation=90, fontsize=24)
+    axs[0].set_ylabel("Depth Profile", rotation=90, fontsize=30)
 
     # plot 2d ground truth wave image
     img_gt = axs[1].imshow(x_star_nofourier_nonosie, cmap='gray')
+    axs[1].axhline(time_list[0], color=color_list[0], linewidth=4)
+    axs[1].axhline(time_list[1], color=color_list[1], linewidth=4)
+    axs[1].axhline(time_list[2], color=color_list[2], linewidth=4)
     axs[1].set_xticks([])
     axs[1].margins(0.3)
-    axs[1].set_ylabel("Time", rotation=90, fontsize=24)
+    axs[1].set_ylabel("Time", rotation=90, fontsize=30)
     axs[1].invert_yaxis()
 
     # plot prior predictives with ground truth wave
-    time_list = [21, 68, 93]
-    prior_samples = dataset[:, :input_x_dim]
+    prior_samples = dataset[:, :100]
     # plot at three times
-    plot_prior_predictives(axs[2], time_list[0], x_star_nofourier_nonosie, prior_samples)
-    plot_prior_predictives(axs[3], time_list[1], x_star_nofourier_nonosie, prior_samples, y_lab=False)
-    plot_prior_predictives(axs[4], time_list[2], x_star_nofourier_nonosie, prior_samples, y_lab=False)
+    plot_prior_predictives(axs[2], time_list[0], x_star_nofourier_nonosie, prior_samples, color=color_list[0])
+    plot_prior_predictives(axs[3], time_list[1], x_star_nofourier_nonosie, prior_samples, color=color_list[1], y_lab=False)
+    plot_prior_predictives(axs[4], time_list[2], x_star_nofourier_nonosie, prior_samples, color=color_list[2], y_lab=False)
 
     # save
     fig.tight_layout()
@@ -266,6 +270,24 @@ if __name__ == '__main__':
     plt.savefig(sPath, dpi=300)
     plt.close()
 
+    """MAP estimation"""
+
+    theta = torch.randn(1, input_x_dim, requires_grad=True).to(device)
+    theta_min = theta.clone().detach().requires_grad_(True)
+    x_cond_tensor = torch.tensor(x_star_processed, dtype=theta.dtype).to(device)
+
+
+    def closure():
+        loss = -pcpmap.loglik_picnn(theta_min, x_cond_tensor)
+        theta_min.grad = torch.autograd.grad(loss, theta_min)[0].detach()
+        return loss
+
+
+    optimizer = torch.optim.LBFGS([theta_min], line_search_fn="strong_wolfe", max_iter=1000000)
+    optimizer.step(closure)
+    theta_min = (theta_min @ Vx.T).detach().cpu().numpy()
+    theta_map = (theta_min * train_std[:, :100] + train_mean[:, :100] + 10.0).squeeze()
+
     """PCP Posterior Plotting"""
 
     # create plot grid for ground truth values
@@ -273,27 +295,31 @@ if __name__ == '__main__':
     fig.set_size_inches(40, 8)
 
     # plot posterior samples with ground truth theta
-    axs[0].plot(xx, theta_star.squeeze(0), c='k')
+    axs[0].plot(xx, theta_star.squeeze(0), c='k', linewidth=2)
+    axs[0].set_ylim(bottom=4.0, top=18.0)
+    # plot map point
+    axs[0].scatter(xx, theta_map, c='m', marker='x', s=256)
     for i in range(theta_samples.shape[0]):
         thetai = theta_samples[i, :]
-        axs[0].plot(xx, thetai, c='r', lw=0.2)
+        axs[0].plot(xx, thetai, c='grey', lw=0.2)
     axs[0].set_xticks([])
-    axs[0].set_ylabel("Depth Profile", rotation=90, fontsize=24)
+    axs[0].set_ylabel("Depth Profile", rotation=90, fontsize=30)
 
     # plot 2d inferred wave image
     sim_wave = wave_wout_noise(theta_samples[0, :].reshape(1, -1))
-    img_sim = axs[1].imshow(sim_wave, cmap='Reds')
+    img_sim = axs[1].imshow(sim_wave, cmap='gray')
+    axs[1].axhline(time_list[0], color=color_list[0], linewidth=4)
+    axs[1].axhline(time_list[1], color=color_list[1], linewidth=4)
+    axs[1].axhline(time_list[2], color=color_list[2], linewidth=4)
     axs[1].set_xticks([])
     axs[1].margins(0.3)
-    axs[1].set_ylabel("Time", rotation=90, fontsize=24)
+    axs[1].set_ylabel("Time", rotation=90, fontsize=30)
     axs[1].invert_yaxis()
 
-    # plot posterior predictives with ground truth wave
-    time_list = [21, 68, 93]
     # plot at three times
-    plot_post_predict(axs[2], time_list[0], x_star_nofourier_nonosie, theta_samples)
-    plot_post_predict(axs[3], time_list[1], x_star_nofourier_nonosie, theta_samples, y_lab=False)
-    plot_post_predict(axs[4], time_list[2], x_star_nofourier_nonosie, theta_samples, y_lab=False)
+    plot_post_predict(axs[2], time_list[0], x_star_nofourier_nonosie, theta_samples, color=color_list[0])
+    plot_post_predict(axs[3], time_list[1], x_star_nofourier_nonosie, theta_samples, color=color_list[1], y_lab=False)
+    plot_post_predict(axs[4], time_list[2], x_star_nofourier_nonosie, theta_samples, color=color_list[2], y_lab=False)
 
     # save
     fig.tight_layout()
@@ -362,11 +388,11 @@ if __name__ == '__main__':
     """Plot PCP from Different Data Size"""
 
     # sample from posterior
-    x_star_processed50k = process_test_data(x_star_fourier, Vs50k, train_mean_50k, train_std_50k, input_x_dim)
-    theta_samples50k = generate_theta(pcpmap50k, x_star_processed50k, train_mean_50k, train_std_50k, input_x_dim,
+    x_star_processed50k = process_test_data(x_star_fourier, Vs50k, train_mean_50k, train_std_50k)
+    theta_samples50k = generate_theta(pcpmap50k, x_star_processed50k, train_mean_50k, train_std_50k,
                                       checkpt_50k['args'].tol, proj_x=Vx50k)
-    x_star_processed20k = process_test_data(x_star_fourier, Vs20k, train_mean_20k, train_std_20k, input_x_dim)
-    theta_samples20k = generate_theta(pcpmap20k, x_star_processed20k, train_mean_20k, train_std_20k, input_x_dim,
+    x_star_processed20k = process_test_data(x_star_fourier, Vs20k, train_mean_20k, train_std_20k)
+    theta_samples20k = generate_theta(pcpmap20k, x_star_processed20k, train_mean_20k, train_std_20k,
                                       checkpt_20k['args'].tol, proj_x=Vx20k)
 
     # grab mean and std
@@ -389,7 +415,7 @@ if __name__ == '__main__':
 
     xx = np.linspace(1, 100, 100)
     axs[0].plot(xx, theta_star.squeeze(), c='k', label="Ground Truth")
-    axs[0].plot(xx, mean20k, c='g', label="Posterior Mean 20k")
+    axs[0].plot(xx, mean20k, c='orange', label="Posterior Mean 20k")
     axs[0].fill_between(xx, (mean20k - std20k), (mean20k + std20k), color='grey', alpha=0.2)
     axs[0].set_ylabel('Depth', fontsize=26)
     axs[0].text(10, 5, f"rel. error = {err_20k:.2f}", fontsize=20, **font)
