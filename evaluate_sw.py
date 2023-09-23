@@ -276,12 +276,10 @@ if __name__ == '__main__':
     theta_min = theta.clone().detach().requires_grad_(True)
     x_cond_tensor = torch.tensor(x_star_processed, dtype=theta.dtype).to(device)
 
-
     def closure():
         loss = -pcpmap.loglik_picnn(theta_min, x_cond_tensor)
         theta_min.grad = torch.autograd.grad(loss, theta_min)[0].detach()
         return loss
-
 
     optimizer = torch.optim.LBFGS([theta_min], line_search_fn="strong_wolfe", max_iter=1000000)
     optimizer.step(closure)
