@@ -53,7 +53,6 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def load_data(data, test_ratio, valid_ratio, batch_size, random_state):
-
     if data == 'lv':
         # TODO change to correct path
         dataset_load = scipy.io.loadmat('.../PCP-Map/datasets/lv_data.mat')
@@ -123,8 +122,8 @@ if __name__ == '__main__':
         if args.data == 'sw':
             _, train_loader, valid_data, _ = load_swdata(batch_size)
             if bool(args.theta_pca) is True:
-                x_full = train_loader.dataset[:, :100]
-                x_full = x_full.view(-1, 100)
+                x_full = train_loader.dataset[:, :args.input_x_dim]
+                x_full = x_full.view(-1, args.input_x_dim)
                 cov_x = x_full.T @ x_full
                 L, V = torch.linalg.eigh(cov_x)
                 # get the last dx columns in V

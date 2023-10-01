@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 from lib.utils import AverageMeter
 
 parser = argparse.ArgumentParser('PCP-Map')
-parser.add_argument('--resume', type=str, default="/experiments/tabcond/lv/...")
+parser.add_argument('--resume', type=str, default="/experiments/cond/lv/...")
 
 args = parser.parse_args()
 
@@ -192,11 +192,11 @@ if __name__ == '__main__':
 
     # TODO change to correct paths
     StochLV = StochasticLotkaVolterra()
-    path_theta1 = '.../PCP-Map/experiments/tabcond/lv/StochasticLV_ABCsamples01.pk'
+    path_theta1 = '.../PCP-Map/experiments/cond/lv/StochasticLV_ABCsamples01.pk'
     theta1 = np.array([0.01, 0.5, 1, 0.01])
     experiment(StochLV, path_theta1, theta1, pcpmap, train_mean, train_std, checkpt)
 
-    path_theta2 = '.../PCP-Map/experiments/tabcond/lv/StochasticLV_ABCsamples015NewTheta.pk'
+    path_theta2 = '.../PCP-Map/experiments/cond/lv/StochasticLV_ABCsamples015NewTheta.pk'
     theta2 = np.array([0.02, 0.02, 0.02, 0.02])
     experiment(StochLV, path_theta2, theta2, pcpmap, train_mean, train_std, checkpt)
 

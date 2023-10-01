@@ -21,9 +21,9 @@ from shallow_water_model.simulator import ShallowWaterSimulator as Simulator
 from shallow_water_model.prior import DepthProfilePrior as Prior
 
 parser = argparse.ArgumentParser('PCP-Map')
-parser.add_argument('--resume', type=str, default="/experiments/tabcond/sw/...")
-parser.add_argument('--resume50k', type=str, default="/experiments/tabcond/sw/...")
-parser.add_argument('--resume20k', type=str, default="/experiments/tabcond/sw/...")
+parser.add_argument('--resume', type=str, default="/experiments/cond/sw/...")
+parser.add_argument('--resume50k', type=str, default="/experiments/cond/sw/...")
+parser.add_argument('--resume20k', type=str, default="/experiments/cond/sw/...")
 
 args = parser.parse_args()
 
@@ -71,7 +71,7 @@ def process_test_data(obs, proj, mean, std, x_dim=100):
     return x_star_proj_norm
 
 
-def generate_theta(generator, x_cond, mean, std, tol, proj_x=None, num_samples=100):
+def generate_theta(generator, x_cond, mean, std, tol, proj_x=None, num_samples=100, printing=True):
     zx = torch.randn(num_samples, 100).to(device)
     if proj_x is not None:
         zx = torch.randn(num_samples, 14).to(device)
@@ -81,8 +81,9 @@ def generate_theta(generator, x_cond, mean, std, tol, proj_x=None, num_samples=1
     x_gen, num_evals = generator.gx(zx, x_cond_tensor.to(device), tol)
     # end timer
     sample_time = time.time() - start
-    print(f"Sampling Time for theta: {sample_time}")
-    print(f"Number of closure calls: {num_evals}")
+    if printing is True:
+        print(f"Sampling Time for theta: {sample_time}")
+        print(f"Number of closure calls: {num_evals}")
     if proj_x is not None:
         x_gen = x_gen @ proj_x.T
     theta_gen = x_gen.detach().cpu().numpy()
@@ -151,10 +152,11 @@ def build_pcpmap(check_point, prior):
 def load_data_info(file_path, valid_ratio):
     data = np.load(file_path)['dataset']
     V = np.load(file_path)['Vs']
-    trn, vld = train_test_split(data, test_size=valid_ratio, random_state=42)
+    trn, _ = train_test_split(data, test_size=valid_ratio, random_state=42)
     mean = np.mean(trn, axis=0, keepdims=True)
     std = np.std(trn, axis=0, keepdims=True)
-    return data, trn, V, mean, std
+    train = (trn - mean) / std
+    return data, train, V, mean, std
 
 
 if __name__ == '__main__':
@@ -329,8 +331,8 @@ if __name__ == '__main__':
 
     """Perform SBC Analysis"""
 
-    path_to_samps = '.../PCP-Map/datasets/sw_test_data.npz'
-    ranks, _ = get_rank_statistic(pcpmap, Vx, train_mean, train_std, checkpt['args'].tol, path_to_samps)
+    path_to_test_samps = '.../PCP-Map/datasets/sw_test_data.npz'
+    ranks, _ = get_rank_statistic(pcpmap, Vx, train_mean, train_std, checkpt['args'].tol, path_to_test_samps)
 
     # plot ranks
     ndim, N = ranks.shape

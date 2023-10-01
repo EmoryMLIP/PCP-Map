@@ -325,12 +325,12 @@ if __name__ == '__main__':
                         exit(0)
                     elif args.data == 'sw':
                         os.system(
-                            "python evaluate_sw.py --resume " + ".../PCPM/" + args.save + "/" + strTitle + '_checkpt.pth'
+                            "python evaluate_sw.py --resume " + ".../PCP-Map" + args.save + "/" + strTitle + '_checkpt.pth'
                         )
                         exit(0)
                     elif args.data == 'lv':
                         os.system(
-                            "python evaluate_lv.py --resume " + ".../PCPM/" + args.save + "/" + strTitle + '_checkpt.pth'
+                            "python evaluate_lv.py --resume " + ".../PCP-Map/" + args.save + "/" + strTitle + '_checkpt.pth'
                         )
                         exit(0)
                     else:
@@ -342,7 +342,7 @@ if __name__ == '__main__':
                         test_hist.loc[len(test_hist.index)] = [args.batch_size, args.lr, args.feature_dim,
                                                                args.feature_y_dim,
                                                                args.num_layers_pi, NLL, MMD, timeMeter.sum, itr]
-                        testfile_name = '/local/scratch3/zwan736/PCPM/experiments/tabcond/' + args.data + '_test_hist.csv'
+                        testfile_name = '.../PCP-Map/experiments/tabcond/' + args.data + '_test_hist.csv'
                         if os.path.isfile(testfile_name):
                             test_hist.to_csv(testfile_name, mode='a', index=False, header=False)
                         else:
@@ -362,12 +362,12 @@ if __name__ == '__main__':
         exit(0)
     elif args.data == 'sw':
         os.system(
-            "python evaluate_sw.py --resume " + ".../PCPM/" + args.save + "/" + strTitle + '_checkpt.pth'
+            "python evaluate_sw.py --resume " + ".../PCP-Map/" + args.save + "/" + strTitle + '_checkpt.pth'
         )
         exit(0)
     elif args.data == 'lv':
         os.system(
-            "python evaluate_lv.py --resume " + ".../PCPM/" + args.save + "/" + strTitle + '_checkpt.pth'
+            "python evaluate_lv.py --resume " + ".../PCP-Map/" + args.save + "/" + strTitle + '_checkpt.pth'
         )
         exit(0)
     else:
@@ -379,7 +379,7 @@ if __name__ == '__main__':
         test_hist.loc[len(test_hist.index)] = [args.batch_size, args.lr, args.feature_dim, args.feature_y_dim,
                                                args.num_layers_pi, NLL, MMD,
                                                timeMeter.sum, itr]
-        testfile_name = '/local/scratch3/zwan736/PCPM/experiments/tabcond/' + args.data + '_test_hist.csv'
+        testfile_name = '.../PCP-Map/experiments/tabcond/' + args.data + '_test_hist.csv'
         if os.path.isfile(testfile_name):
             test_hist.to_csv(testfile_name, mode='a', index=False, header=False)
         else:

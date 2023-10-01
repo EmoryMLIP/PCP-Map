@@ -13,7 +13,7 @@ from src.mmd import mmd
 from lib.utils import AverageMeter
 
 parser = argparse.ArgumentParser('PCP-Map')
-parser.add_argument('--resume',         type=str, default="experiments/tabcond/...")
+parser.add_argument('--resume',         type=str, default="experiments/tabjoint/...")
 
 args = parser.parse_args()
 
