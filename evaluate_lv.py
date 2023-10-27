@@ -81,7 +81,7 @@ def experiment(LV, abc_dat_path, theta_star, model, trn_mean, trn_std, checkpt):
     """plot MAP point and posterior samples"""
 
     theta_star_log = np.log(theta_star)
-    symbols = [r'$\theta_1$', r'$\theta_2$', r'$\theta_3$', r'$\theta_4$']
+    symbols = [r'$x_1$', r'$x_2$', r'$x_3$', r'$x_4$']
     log_limits = [[-5., 2.], [-5., 2.], [-5., 2.], [-5., 2.]]
     plot_matrix(theta_gen, log_limits, xtrue=theta_star_log, xmap=theta_map.squeeze(), symbols=symbols)
     sPath = os.path.join(checkpt['args'].save, 'figs', checkpt['args'].data + '_' + str(theta_star[0].item()) + '.png')
@@ -192,11 +192,11 @@ if __name__ == '__main__':
 
     # TODO change to correct paths
     StochLV = StochasticLotkaVolterra()
-    path_theta1 = '.../PCP-Map/experiments/cond/lv/StochasticLV_ABCsamples01.pk'
+    path_theta1 = '.../PCP-Map/datasets/StochasticLV_ABCsamples01.pk'
     theta1 = np.array([0.01, 0.5, 1, 0.01])
     experiment(StochLV, path_theta1, theta1, pcpmap, train_mean, train_std, checkpt)
 
-    path_theta2 = '.../PCP-Map/experiments/cond/lv/StochasticLV_ABCsamples015NewTheta.pk'
+    path_theta2 = '.../PCP-Map/datasets/StochasticLV_ABCsamples015NewTheta.pk'
     theta2 = np.array([0.02, 0.02, 0.02, 0.02])
     experiment(StochLV, path_theta2, theta2, pcpmap, train_mean, train_std, checkpt)
 
