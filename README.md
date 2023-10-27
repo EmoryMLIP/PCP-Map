@@ -9,12 +9,20 @@ neural networks (FICNN) and the between conditional measures. Note that for some
 scripts, users have to set the appropriate arguments in the parser based on to which dataset 
 they are learning. Moreover, users in some occasions need to fill in the absolute paths of files.
 
+Paper:
+https://arxiv.org/abs/2310.16975
+
 ## UCI Tabular Datasets Experiments
 Perform pilot runs to search for best hyperparameter combinations:
 
 ```
-python pretrain_cond.py
-python pretrain_joint.py
+python pretrain_cond.py --data 'concrete' --input_x_dim 1 --input_y_dim 8
+python pretrain_cond.py --data 'energy' --input_x_dim 1 --input_y_dim 9
+python pretrain_cond.py --data 'yacht' --input_x_dim 1 --input_y_dim 6
+
+python pretrain_joint.py --data 'parkinson' --input_x_dim 8 --input_y_dim 7
+python pretrain_joint.py --data 'rd_wine' --input_x_dim 6 --input_y_dim 5
+python pretrain_joint.py --data 'wt_wine' --input_x_dim 6 --input_y_dim 5
 ```
 
 Perform experiments with the 10 best hyperparameter combinations from pilot runs:
@@ -23,11 +31,6 @@ python experiment_tab_cond.py
 python experiment_tab_joint.py
 ```
 
-Train a single PCPM model:
-```
-python train_joint.py
-python train_cond.py
-```
 
 Evaluate the trained model
 ```
