@@ -40,6 +40,11 @@ python evaluate_joint.py
 
 ## Stochastic Lotka-Volterra Experiment
 
+Prepare training dataset:
+```commandline
+python sample_stoch_lv.py
+```
+
 Perform pilot runs to search for best hyperparameter combination:
 ```
 python pretrain_cond.py --data 'lv' --input_x_dim 4 --input_y_dim 9
