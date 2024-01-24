@@ -48,7 +48,7 @@ parser.add_argument('--random_state',   type=int, default=42, help="random state
 
 parser.add_argument('--save_test',      type=int, default=1, help="if 1 then saves test numerics 0 if not")
 parser.add_argument('--save',           type=str, default='experiments/cond', help="define the save directory")
-parser.add_argument('--theta_pca',      type=int, default=1, help="project theta in for shallow water")
+parser.add_argument('--theta_pca',      type=int, default=0, help="project theta in for shallow water")
 
 args = parser.parse_args()
 
