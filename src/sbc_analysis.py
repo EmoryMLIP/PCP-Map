@@ -46,7 +46,7 @@ def get_rank_statistic(
     """
     Calculate rank statistics.
 
-    generator: trained GATSBI generator network.
+    generator: trained PCP-Map generator network.
     path_to_samples: file from which to load groundtruth samples.
     num_samples: number test samples per conditioning variable.
     save: if True, save ranks as npz file.
