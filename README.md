@@ -41,7 +41,8 @@ python evaluate_joint.py
 ## Stochastic Lotka-Volterra Experiment
 
 Prepare training dataset:
-```commandline
+
+```
 python sample_stoch_lv.py
 ```
 
@@ -61,6 +62,13 @@ python evaluate_lv.py
 ```
 
 ## 1D Shallow Water Equations Experiment
+
+Prepare training dataset:
+
+```
+python sample_shallow_water.py
+```
+
 Perform pilot runs to search for best hyperparameter combination:
 ```
 python pretrain_cond.py --data 'sw' --input_x_dim 100 --input_y_dim 3500 --theta_pca 1

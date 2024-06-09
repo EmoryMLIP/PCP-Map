@@ -21,9 +21,9 @@ from shallow_water_model.simulator import ShallowWaterSimulator as Simulator
 from shallow_water_model.prior import DepthProfilePrior as Prior
 
 parser = argparse.ArgumentParser('PCP-Map')
-parser.add_argument('--resume', type=str, default="/experiments/cond/sw/...")
-parser.add_argument('--resume50k', type=str, default="/experiments/cond/sw/...")
-parser.add_argument('--resume20k', type=str, default="/experiments/cond/sw/...")
+parser.add_argument('--resume', type=str, default="/experiments/sw_100k_64_0.001_3_256_checkpt.pth")
+parser.add_argument('--resume50k', type=str, default="/experiments/cond/sw_50k_64_0.001_3_256_checkpt.pth")
+parser.add_argument('--resume20k', type=str, default="/experiments/cond/sw_20k_64_0.001_3_256_checkpt.pth")
 
 args = parser.parse_args()
 
