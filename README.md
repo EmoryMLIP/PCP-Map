@@ -63,7 +63,7 @@ python evaluate_lv.py
 
 ## 1D Shallow Water Equations Experiment
 
-Prepare training dataset:
+Prepare training dataset (the datasets used for the associated paper can be found through https://drive.google.com/drive/folders/1ObuuATIEsC3z9d0S_WRp2lGZVOClu0Ip?usp=drive_link):
 
 ```
 python sample_shallow_water.py
