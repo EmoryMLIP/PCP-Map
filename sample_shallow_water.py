@@ -60,7 +60,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--num_simulations", type=int, default=10000)
     parser.add_argument("--num_processes", type=int, default=20)
-    parser.add_argument("--path_to_save", type=str, default=".../PCP-Map/shallow_water_data/")
+    # TODO: change to correct path
+    parser.add_argument("--path_to_save", type=str, default=".../PCP-Map/datasets/shallow_water_data/")
     parser.add_argument("--job_num", type=int, default=1)
     args = parser.parse_args()
     main(args)
