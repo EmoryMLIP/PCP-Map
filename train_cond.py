@@ -140,9 +140,9 @@ def evaluate_model(model, data, batch_size, test_ratio, valid_ratio, random_stat
     zx = torch.randn(testData.shape[0], input_x_dim).to(device)
     x_generated, _ = model.gx(zx, testData[:, :input_y_dim].to(device), tol=tol)
     x_generated = x_generated.detach().to(device)
-    mean_max_dis = mmd(x_generated, testData[:, input_y_dim:])
+    mean_max_dis = mmd(x_generated, testData[:, input_y_dim:].to(device))
 
-    return pb_mean_NLL.item(), mean_max_dis
+    return pb_mean_NLL.item(), mean_max_dis.item()
 
 
 """
