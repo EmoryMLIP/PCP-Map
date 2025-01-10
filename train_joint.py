@@ -145,9 +145,9 @@ def evaluate_model(ficnn_model, picnn_model, data, batch_size, test_ratio, valid
     x_generated = x_generated.detach().to(device)
     sample = torch.cat((y_generated, x_generated), dim=1)
     # calculate MMD statistic
-    mean_max_dis = mmd(sample, dat)
+    mean_max_dis = mmd(sample, dat.to(device))
 
-    return testLossMeter.avg, mean_max_dis
+    return testLossMeter.avg, mean_max_dis.item()
 
 
 """
